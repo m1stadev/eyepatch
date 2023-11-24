@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "eyepatch"
+version = "0.1"
+description = "An *OS bootchain patcher."
+authors = ["m1stadev <adamhamdi31@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/m1stadev/eyepatch"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/m1stadev/eyepatch/issues"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
