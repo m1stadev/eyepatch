@@ -12,3 +12,10 @@ class Insn:
 class Xref:
     from_: Insn
     to: Insn
+
+
+@dataclass
+class String:
+    string: str
+    offset: int
+    length: int
