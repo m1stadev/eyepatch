@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Insn:
+    offset: int
     mnemonic: str
     op_str: str
     data: bytes
