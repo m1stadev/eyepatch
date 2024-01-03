@@ -10,8 +10,8 @@ class ByteString(XrefMixin):
         return f'0x{self.offset:x}: {self._str.decode()}'
 
     @property
-    def data(self) -> bytes:
-        return self._data
+    def string(self) -> bytes:
+        return self._str
 
     @property
     def offset(self) -> int:
