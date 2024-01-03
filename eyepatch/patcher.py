@@ -1,9 +1,10 @@
-from typing import Generator, Optional
+from typing import Generator, Optional, Union
 
 from capstone import CS_ARCH_ARM64, CS_MODE_ARM, CS_MODE_LITTLE_ENDIAN, Cs, CsError
 from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
 from .insn import Insn
+from .string import ByteString
 
 
 class Patcher:
@@ -47,3 +48,13 @@ class Patcher:
 
                 # print('found insn but skipping...')
                 skip -= 1
+
+    def search_string(self, string: Union[str, bytes]) -> Optional[ByteString]:
+        if isinstance(string, str):
+            string = string.encode()
+
+        print(f'searching for string {string.decode()}')
+        index = self._data.find(string)
+        if index == -1:
+            return None
+        return ByteString(string, index)
