@@ -17,12 +17,23 @@ class Patcher:
 
         self._ks = Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN)
 
-    def disasm(self, offset: int) -> Generator[Insn, None, None]:
-        if len(self._data) < (offset + 4):
+    def disasm(self, offset: int, reverse: bool = False) -> Generator[Insn, None, None]:
+        if reverse:
+            len_check = offset - 4 > 0
+            range_obj = range(offset, 0, -4)
+        else:
+            len_check = offset + 4 < len(self._data)
+            range_obj = range(offset, len(self._data), 4)
+
+        if not len_check:
             return  # TODO: Raise error
 
-        for i in range(offset, len(self._data), 4):
+        for i in range_obj:
+            if reverse:
+                i -= 4
+
             data = self._data[i : i + 4]
+
             try:
                 instr = next(self._cs.disasm(code=data, offset=0))
                 yield Insn(data, i, instr)
