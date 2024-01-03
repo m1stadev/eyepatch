@@ -1,7 +1,7 @@
 from typing import Optional
 
 from capstone import CsInsn
-from capstone.arm64_const import ARM64_GRP_CALL, ARM64_OP_IMM
+from capstone.arm64_const import ARM64_GRP_JUMP, ARM64_OP_IMM
 
 
 class Insn:
@@ -37,7 +37,7 @@ class Insn:
                     skip -= 1
 
     def follow_call(self, patcher: 'Patcher') -> 'Insn':  # noqa: F821
-        if self.disasm.group(ARM64_GRP_CALL):
+        if self.disasm.group(ARM64_GRP_JUMP):
             for op in self.disasm.operands:
                 if op.type == ARM64_OP_IMM:
                     return next(patcher.disasm(op.imm + self.offset))
