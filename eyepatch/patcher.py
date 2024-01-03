@@ -11,9 +11,9 @@ class Patcher:
         self._data = data
 
         # Change arch to CS_ARCH_AARCH64 when Capstone 6.0 releases
-        # TODO: We can probably use diet engine instead to save memory/time
         self._cs = Cs(CS_ARCH_ARM64, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
         self._cs.detail = True
+
         self._ks = Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN)
 
     def disasm(self, offset: int) -> Generator[Insn, None, None]:

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "eyepatch"
 version = "0.1"
-description = "An *OS bootchain patcher."
+description = "A *OS bootchain patcher."
 authors = ["m1stadev <adamhamdi31@gmail.com>"]
 license = "MIT"
 readme = "README.md"

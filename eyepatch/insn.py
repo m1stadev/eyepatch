@@ -1,7 +1,7 @@
 from typing import Optional
 
 from capstone import CsInsn
-from capstone.arm64_const import ARM64_OP_IMM
+from capstone.arm64_const import ARM64_GRP_CALL, ARM64_OP_IMM
 
 
 class Insn:
@@ -30,9 +30,17 @@ class Insn:
         return self._offset
 
     def xref(self, skip: int = 0) -> Optional['Insn']:
-        for insn in self._patcher.disasm(0):
+        for insn in self._patcher.disasm(0x0):
             for op in insn.disasm.operands:
                 if op.type == ARM64_OP_IMM and (op.imm + insn.offset) == self.offset:
                     if skip == 0:
                         return insn
                     skip -= 1
+
+    def follow_call(self) -> 'Insn':
+        if self.disasm.group(ARM64_GRP_CALL):
+            for op in self.disasm.operands:
+                if op.type == ARM64_OP_IMM:
+                    return next(self._patcher.disasm(op.imm + self.offset))
+
+        # TODO: raise error
