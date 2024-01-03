@@ -24,7 +24,7 @@ class Patcher:
             data = self._data[i : i + 4]
             try:
                 instr = next(self._cs.disasm(code=data, offset=0))
-                yield Insn(self, data, i, instr)
+                yield Insn(data, i, instr)
             except (CsError, StopIteration):
                 pass
 
