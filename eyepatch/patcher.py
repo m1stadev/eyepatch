@@ -1,10 +1,9 @@
-from typing import Optional
+from typing import Generator, Optional
 
-from binary2strings import extract_all_strings
-from capstone import CS_ARCH_ARM64, CS_MODE_ARM, CS_MODE_LITTLE_ENDIAN, Cs
+from capstone import CS_ARCH_ARM64, CS_MODE_ARM, CS_MODE_LITTLE_ENDIAN, Cs, CsError
 from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
-from .types import Insn, String
+from .insn import Insn
 
 
 class Patcher:
@@ -17,72 +16,34 @@ class Patcher:
         self._cs.detail = True
         self._ks = Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN)
 
-        self._disasm_data()
+    def disasm(self, offset: int) -> Generator[Insn, None, None]:
+        if len(self._data) < (offset + 4):
+            return  # TODO: Raise error
 
-    def __len__(self):
-        return len(self.data)
-
-    def _disasm_data(self) -> list[Insn]:
-        self._strings = [
-            String(string[0], string[2][0], len(string[0]))
-            for string in extract_all_strings(self.data)
-        ]
-
-        string_offsets = set()
-        for string in self.strings:
-            string_offsets.update(range(string.offset, string.offset + string.length))
-
-        self._insns = []
-        for i in range(0, len(self.data), 4):
-            if i in string_offsets:
-                continue
-
-            insn = self._disasm(self.data[i : i + 4])
-            if insn is None:
-                continue
-
-            # TODO: make this quicker
-            if not any(insn == i for i in self._insns):
-                self._insns.append(insn)
-
-        # self._insns.sort(key=lambda insn: insn.offset)
-
-    def _disasm(self, data: bytes) -> Optional[Insn]:
-        if len(data) != 4:
-            raise ValueError('data must be 4 bytes')
-
-        try:
-            insn = next(insn for insn in self._cs.disasm(data, 0, 1))
-        except StopIteration:
-            return None
-
-        if insn.insn_name() == 'udf':
-            return None
-        else:
-            # (
-            #    _,
-            #    _,
-            #    _,
-            #    _,
-            #    operands,
-            # ) = arm64.get_arch_info(insn._raw.detail.contents.arch.arm64)
-            # print(insn.bytes.hex())
-            # print(f'{insn.insn_name()} {insn.op_str}')
-            # for op in operands:
-            #    print(hex(op.imm))
-
-            return Insn(
-                self.data.find(insn.bytes), insn.mnemonic, insn.op_str, insn.bytes
-            )
+        for i in range(offset, len(self._data), 4):
+            data = self._data[i : i + 4]
+            try:
+                instr = next(self._cs.disasm(code=data, offset=0))
+                yield Insn(self, data, i, instr)
+            except (CsError, StopIteration):
+                pass
 
     @property
     def data(self) -> bytes:
         return self._data
 
-    @property
-    def insns(self) -> list[Insn]:
-        return self._insns
+    def search_instr(
+        self, instr: str, skip: int = 0, offset: int = 0
+    ) -> Optional[Insn]:
+        print(f'searching for {instr} insn (skip={skip}, offset=0x{offset:x})')
+        for insn in self.disasm(offset):
+            if insn.disasm.mnemonic == instr:
+                if skip == 0:
+                    # print('found insn:')
+                    # print(
+                    #    f'0x{insn.offset:x}: {insn.disasm.mnemonic} {insn.disasm.op_str}'
+                    # )
+                    return insn
 
-    @property
-    def strings(self) -> list[String]:
-        return self._strings
+                # print('found insn but skipping...')
+                skip -= 1
