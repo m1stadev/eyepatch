@@ -1,5 +1,10 @@
 from capstone import CsInsn
-from capstone.arm64_const import ARM64_GRP_JUMP, ARM64_OP_IMM
+from capstone.arm64_const import (
+    ARM64_GRP_JUMP,
+    ARM64_OP_IMM,
+    ARM64_REG_SP,
+    ARM64_REG_X29,
+)
 
 from .xref import XrefMixin
 
@@ -35,3 +40,20 @@ class Insn(XrefMixin):
                     return next(patcher.disasm(op.imm + self.offset))
 
         # TODO: raise error
+
+    def function_begin(self, patcher: 'Patcher') -> 'Insn':  # noqa: F821
+        disasm = patcher.disasm(self.offset, reverse=True)
+        while True:
+            insn = next(disasm)
+            if (insn.disasm.mnemonic != 'add') and (
+                [op.reg for op in insn.disasm.operands[:2]]
+                != [ARM64_REG_X29, ARM64_REG_SP]
+            ):
+                continue
+            if (insn := next(disasm)).disasm.mnemonic != 'stp':
+                continue
+
+            while insn.disasm.mnemonic == 'stp':
+                insn = next(disasm)
+
+            return insn
