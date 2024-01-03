@@ -1,6 +1,8 @@
 from capstone import CsInsn
 from capstone.arm64_const import (
     ARM64_GRP_JUMP,
+    ARM64_INS_ADD,
+    ARM64_INS_STP,
     ARM64_OP_IMM,
     ARM64_REG_SP,
     ARM64_REG_X29,
@@ -45,15 +47,15 @@ class Insn(XrefMixin):
         disasm = patcher.disasm(self.offset, reverse=True)
         while True:
             insn = next(disasm)
-            if (insn.disasm.mnemonic != 'add') and (
+            if (insn.disasm.id != ARM64_INS_ADD) and (
                 [op.reg for op in insn.disasm.operands[:2]]
                 != [ARM64_REG_X29, ARM64_REG_SP]
             ):
                 continue
-            if (insn := next(disasm)).disasm.mnemonic != 'stp':
+            if (insn := next(disasm)).disasm.id != ARM64_INS_STP:
                 continue
 
-            while insn.disasm.mnemonic == 'stp':
+            while insn.disasm.id == ARM64_INS_STP:
                 insn = next(disasm)
 
             return insn
