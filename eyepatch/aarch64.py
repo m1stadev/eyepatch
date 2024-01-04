@@ -59,7 +59,7 @@ class ByteString(_ByteString, XrefMixin):
     pass
 
 
-class Disassember(_Disassembler):
+class Disassembler(_Disassembler):
     _insn = Insn
     _string = ByteString
 
