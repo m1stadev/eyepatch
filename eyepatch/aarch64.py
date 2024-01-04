@@ -11,9 +11,9 @@ from capstone.arm64_const import (
     ARM64_REG_X29,
 )
 
-from .disasm import _Disassembler
-from .insn import _Insn
-from .string import _ByteString
+from .base.disasm import _Disassembler
+from .base.insn import _Insn
+from .base.string import _ByteString
 
 
 class XrefMixin:
