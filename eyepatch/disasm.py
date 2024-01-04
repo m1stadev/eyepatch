@@ -45,13 +45,12 @@ class _Disassembler:
 
     def search_insn(
         self,
-        insn: str,
+        insn_name: str,
         offset: int = 0,
         skip: int = 0,
     ) -> Optional[_insn]:
         for insn in self.disasm(offset):
-            print(insn)
-            if insn.data.mnemonic == insn:
+            if insn.data.mnemonic == insn_name:
                 if skip == 0:
                     return insn
 
