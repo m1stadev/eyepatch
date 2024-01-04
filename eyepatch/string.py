@@ -1,7 +1,4 @@
-from .xref import XrefMixin
-
-
-class ByteString(XrefMixin):
+class _ByteString:
     def __init__(self, string: bytes, offset: int):
         self._str = string
         self._offset = offset
