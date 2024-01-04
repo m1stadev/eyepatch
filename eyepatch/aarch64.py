@@ -52,7 +52,7 @@ class Insn(_Insn, XrefMixin):
             while insn.data.id in (ARM64_INS_STP, ARM64_INS_SUB):
                 insn = next(disasm)
 
-            return next(self._disasm.disasm(insn.offset + 4))
+            return next(self.disasm.disasm(insn.offset + 4))
 
 
 class ByteString(_ByteString, XrefMixin):
