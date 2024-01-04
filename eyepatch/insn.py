@@ -3,6 +3,7 @@ from capstone.arm64_const import (
     ARM64_GRP_JUMP,
     ARM64_INS_ADD,
     ARM64_INS_STP,
+    ARM64_INS_SUB,
     ARM64_OP_IMM,
     ARM64_REG_SP,
     ARM64_REG_X29,
@@ -52,10 +53,11 @@ class Insn(XrefMixin):
                 != [ARM64_REG_X29, ARM64_REG_SP]
             ):
                 continue
+
             if (insn := next(disasm)).disasm.id != ARM64_INS_STP:
                 continue
 
-            while insn.disasm.id == ARM64_INS_STP:
+            while insn.disasm.id in (ARM64_INS_STP, ARM64_INS_SUB):
                 insn = next(disasm)
 
-            return insn
+            return next(patcher.disasm(insn.offset + 4))
