@@ -22,6 +22,7 @@ class XrefMixin:
     def xref(self, base_addr: int, skip: int = 0) -> Optional['Insn']:  # noqa: F821
         xref_insn = None
         for insn in self.disasm.disasm(0x0):
+            # TODO: add support for other instructions
             if len(insn.data.operands) == 0:
                 continue
 
@@ -30,7 +31,7 @@ class XrefMixin:
                 if op.mem.base != ARM_REG_PC:
                     continue
 
-                offset = insn.offset + op.mem.disp + insn.data.size
+                offset = insn.offset + op.mem.disp
 
                 data = self.disasm.data[offset : offset + 4]
                 offset2 = unpack('<i', data)[0]
@@ -130,10 +131,11 @@ class Disassembler(_Disassembler):
                 if op.mem.base != ARM_REG_PC:
                     continue
 
-                imm_offset = insn.offset + op.mem.disp + insn.data.size
+                imm_offset = insn.offset + op.mem.disp + 0x4
 
                 data = self.data[imm_offset : imm_offset + 4]
                 insn_imm = unpack('<i', data)[0]
+
                 if insn_imm == imm:
                     if skip == 0:
                         match = insn
