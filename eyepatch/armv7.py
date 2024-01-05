@@ -9,7 +9,7 @@ from capstone import (
     Cs,
     CsError,
 )
-from capstone.arm_const import ARM_OP_MEM, ARM_REG_PC
+from capstone.arm_const import ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
 
 from .base.disasm import _Disassembler
 from .base.insn import _Insn
@@ -21,9 +21,12 @@ class XrefMixin:
         xref_insn = None
         for insn in self.disasm.disasm(0x0):
             # TODO: add support for other instructions
-            if insn.data.mnemonic == 'ldr':
-                op = insn.data.operands[-1]
-                if op.type != ARM_OP_MEM or op.mem.base != ARM_REG_PC:
+            if len(insn.data.operands) == 0:
+                continue
+
+            op = insn.data.operands[-1]
+            if op.type == ARM_OP_MEM:
+                if op.mem.base != ARM_REG_PC:
                     continue
 
                 offset = insn.offset + op.mem.disp
@@ -33,6 +36,14 @@ class XrefMixin:
 
                 # TODO: we can't confirm without image base so this is just hardcoded rn, fix later
                 if offset2 - self.offset == 0x4FF00000:
+                    if skip == 0:
+                        xref_insn = insn
+                        break
+
+                    skip -= 1
+
+            elif op.type == ARM_OP_IMM:
+                if op.imm + insn.offset == self.offset:
                     if skip == 0:
                         xref_insn = insn
                         break
@@ -79,9 +90,9 @@ class Disassembler(_Disassembler):
             if reverse:
                 i -= 4
 
-            size = 0
+            # ugly code but it works
+            size = 4
             for _ in range(2):
-                size += 2
                 data = self._data[i : i + size]
                 disasm = '_thumb_disasm' if size == 2 else '_disasm'
 
@@ -90,6 +101,8 @@ class Disassembler(_Disassembler):
                     yield self._insn(self, insn, i)
                 except (CsError, StopIteration):
                     continue
+
+                size -= 2
 
             else:
                 continue
