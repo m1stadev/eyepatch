@@ -17,7 +17,7 @@ from .base.string import _ByteString
 
 
 class XrefMixin:
-    def xref(self, skip: int = 0) -> Optional['Insn']:  # noqa: F821
+    def xref(self, base_addr: int, skip: int = 0) -> Optional['Insn']:  # noqa: F821
         xref_insn = None
         for insn in self.disasm.disasm(0x0):
             if len(insn.data.operands) == 0:
@@ -33,8 +33,7 @@ class XrefMixin:
                 data = self.disasm.data[offset : offset + 4]
                 offset2 = unpack('<i', data)[0]
 
-                # TODO: we can't confirm without image base so this is just hardcoded rn, fix later
-                if offset2 - self.offset == 0x4FF00000:
+                if offset2 - self.offset == base_addr:
                     if skip == 0:
                         xref_insn = insn
                         break
