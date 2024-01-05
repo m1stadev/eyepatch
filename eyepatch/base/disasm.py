@@ -64,4 +64,4 @@ class _Disassembler:
         if index == -1:
             return None
 
-        return self._string(string, index)
+        return self._string(self, string, index)
