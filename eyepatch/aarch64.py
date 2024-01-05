@@ -37,7 +37,7 @@ class Insn(_Insn, XrefMixin):
         # TODO: raise error
 
     def function_begin(self) -> 'Insn':  # noqa: F821
-        disasm = self._disasm.disasm(self.offset, reverse=True)
+        disasm = self.disasm.disasm(self.offset, reverse=True)
         while True:
             insn = next(disasm)
             if (insn.data.id != ARM64_INS_ADD) and (
