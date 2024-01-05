@@ -10,9 +10,14 @@ class _Disassembler:
     _insn = _Insn
     _string = _ByteString
 
-    def __init__(self, disasm: Cs):
+    def __init__(self, data: bytes, disasm: Cs):
+        self._data = data
         self._disasm = disasm
         self._disasm.detail = True
+
+    @property
+    def data(self) -> bytes:
+        return self._data
 
     def disasm(
         self, offset: int, reverse: bool = False
@@ -38,10 +43,6 @@ class _Disassembler:
                 yield self._insn(self, instr, i)
             except (CsError, StopIteration):
                 pass
-
-    @property
-    def data(self) -> bytes:
-        return self._data
 
     def search_insn(
         self,

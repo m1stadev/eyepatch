@@ -72,12 +72,12 @@ class Disassembler(_Disassembler):
     _string = ByteString
 
     def __init__(self, data: bytes):
-        super().__init__(disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN))
+        super().__init__(
+            data=data, disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
+        )
 
         self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
         self._thumb_disasm.detail = True
-
-        self._data = data
 
     def disasm(
         self, offset: int, reverse: bool = False

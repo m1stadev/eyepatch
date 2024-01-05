@@ -67,9 +67,7 @@ class Disassembler(_Disassembler):
 
     def __init__(self, data: bytes):
         # TODO: Change arch to CS_ARCH_AARCH64 when Capstone 6.0 releases
-        super().__init__(disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM))
-
-        self._data = data
+        super().__init__(data=data, disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM))
 
 
 class Assembler(_Assembler):
