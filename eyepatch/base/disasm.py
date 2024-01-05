@@ -65,3 +65,11 @@ class _Disassembler:
             return None
 
         return self._string(self, string, index)
+
+    def search_imm(self, imm: int, skip: int = 0) -> Optional[_insn]:
+        for insn in self.disasm(0):
+            if any(imm == op.imm for op in insn.data.operands):
+                if skip == 0:
+                    return insn
+
+                skip -= 1

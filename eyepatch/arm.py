@@ -118,3 +118,36 @@ class Disassembler(_Disassembler):
 
             if insn is not None:
                 yield self._insn(self, insn, i)
+
+    def search_imm(self, imm: int, skip: int = 0) -> Optional[_insn]:
+        match = None
+        for insn in self.disasm(0x0):
+            if len(insn.data.operands) == 0:
+                continue
+
+            op = insn.data.operands[-1]
+            if op.type == ARM_OP_MEM:
+                if op.mem.base != ARM_REG_PC:
+                    continue
+
+                imm_offset = insn.offset + op.mem.disp + 0x4
+
+                data = self.data[imm_offset : imm_offset + 4]
+                insn_imm = unpack('<i', data)[0]
+
+                if insn_imm == imm:
+                    if skip == 0:
+                        match = insn
+                        break
+
+                    skip -= 1
+
+            elif op.type == ARM_OP_IMM:
+                if op.imm == imm:
+                    if skip == 0:
+                        match = insn
+                        break
+
+                    skip -= 1
+
+        return match
