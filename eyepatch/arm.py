@@ -119,9 +119,9 @@ class Disassembler(_Disassembler):
             if insn is not None:
                 yield self._insn(self, insn, i)
 
-    def search_imm(self, imm: int, skip: int = 0) -> Optional[_insn]:
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
         match = None
-        for insn in self.disasm(0x0):
+        for insn in self.disasm(offset):
             if len(insn.data.operands) == 0:
                 continue
 

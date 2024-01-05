@@ -67,8 +67,8 @@ class _Disassembler:
 
         return self._string(self, string, index)
 
-    def search_imm(self, imm: int, skip: int = 0) -> Optional[_insn]:
-        for insn in self.disasm(0):
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
+        for insn in self.disasm(offset):
             if any(imm == op.imm for op in insn.data.operands):
                 if skip == 0:
                     return insn
