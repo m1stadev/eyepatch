@@ -9,7 +9,7 @@ from capstone import (
     Cs,
     CsError,
 )
-from capstone.arm_const import ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
+from capstone.arm_const import ARM_GRP_JUMP, ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
 
 from .base.disasm import _Disassembler
 from .base.insn import _Insn
@@ -54,7 +54,13 @@ class XrefMixin:
 
 
 class Insn(_Insn, XrefMixin):
-    pass
+    def follow_call(self) -> 'Insn':  # noqa: F821
+        if self.data.group(ARM_GRP_JUMP):
+            for op in self.data.operands:
+                if op.type == ARM_OP_IMM:
+                    return next(self.disasm.disasm(op.imm + self.offset))
+
+        # TODO: raise error
 
 
 class ByteString(_ByteString, XrefMixin):
@@ -90,19 +96,25 @@ class Disassembler(_Disassembler):
             if reverse:
                 i -= 4
 
-            # ugly code but it works
-            size = 4
-            for _ in range(2):
+            # ugly code but it works(-ish)
+            # try in the following order:
+            # disassemble 2 bytes as thumb insn
+            # disassemble 4 bytes as thumb insn
+            # disassemble 4 bytes as arm insn
+            insn = None
+            for size in (2, 4):
                 data = self._data[i : i + size]
-                disasm = '_thumb_disasm' if size == 2 else '_disasm'
 
                 try:
-                    insn = next(getattr(self, disasm).disasm(code=data, offset=0))
-                    yield self._insn(self, insn, i)
+                    insn = next(self._thumb_disasm.disasm(code=data, offset=0))
+                    break
                 except (CsError, StopIteration):
-                    continue
+                    if size == 4:
+                        try:
+                            insn = next(self._disasm.disasm(code=data, offset=0))
+                            break
+                        except (CsError, StopIteration):
+                            pass
 
-                size -= 2
-
-            else:
-                continue
+            if insn is not None:
+                yield self._insn(self, insn, i)
