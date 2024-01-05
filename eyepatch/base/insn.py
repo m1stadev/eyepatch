@@ -1,4 +1,4 @@
-from capstone import Cs, CsInsn
+from capstone import CsInsn
 
 
 class _Insn:
@@ -18,9 +18,19 @@ class _Insn:
         return self._data
 
     @property
-    def disasm(self) -> Cs:
+    def disasm(self) -> '_Disassembler':  # noqa: F821
         return self._disasm
 
     @property
     def offset(self) -> int:
         return self._offset
+
+    def patch(self, data: bytes) -> '_Insn':
+        if len(data) != self.data.size:
+            raise ValueError(
+                'New instruction must be the same size as the current instruction'
+            )
+
+        self.disasm._data[self.offset : self.offset + len(data)] = data
+        insn = self.disasm._disasm(code=data, offset=0)
+        return self.__class__(self, insn, self.offset)
