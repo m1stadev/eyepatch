@@ -10,7 +10,9 @@ from capstone import (
     CsError,
 )
 from capstone.arm_const import ARM_GRP_JUMP, ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
+from keystone import KS_ARCH_ARM, KS_MODE_ARM, KS_MODE_THUMB, Ks, KsError
 
+from .base.asm import _Assembler
 from .base.disasm import _Disassembler
 from .base.insn import _Insn
 from .base.string import _ByteString
@@ -148,3 +150,19 @@ class Disassembler(_Disassembler):
                     skip -= 1
 
         return match
+
+
+class Assembler(_Assembler):
+    def __init__(self):
+        super().__init__(asm=Ks(KS_ARCH_ARM, KS_MODE_ARM))
+
+        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
+
+    def asm_thumb(self, insn: str) -> bytes:
+        try:
+            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
+        except KsError:
+            # TODO: Raise error
+            pass
+
+        return asm

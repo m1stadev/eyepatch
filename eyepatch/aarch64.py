@@ -1,6 +1,6 @@
 from typing import Optional
 
-from capstone import CS_ARCH_ARM64, CS_MODE_ARM, CS_MODE_LITTLE_ENDIAN, Cs
+from capstone import CS_ARCH_ARM64, CS_MODE_ARM, Cs
 from capstone.arm64_const import (
     ARM64_GRP_JUMP,
     ARM64_INS_ADD,
@@ -10,7 +10,9 @@ from capstone.arm64_const import (
     ARM64_REG_SP,
     ARM64_REG_X29,
 )
+from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
+from .base.asm import _Assembler
 from .base.disasm import _Disassembler
 from .base.insn import _Insn
 from .base.string import _ByteString
@@ -65,6 +67,11 @@ class Disassembler(_Disassembler):
 
     def __init__(self, data: bytes):
         # TODO: Change arch to CS_ARCH_AARCH64 when Capstone 6.0 releases
-        super().__init__(disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN))
+        super().__init__(disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM))
 
         self._data = data
+
+
+class Assembler(_Assembler):
+    def __init__(self):
+        super().__init__(asm=Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN))
