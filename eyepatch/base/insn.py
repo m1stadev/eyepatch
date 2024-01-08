@@ -1,8 +1,14 @@
-from typing import Optional, Self
+from sys import version_info
+from typing import Optional
 
 from capstone import CsInsn
 
 import eyepatch.base
+
+if version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class _Insn:
