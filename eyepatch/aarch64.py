@@ -32,9 +32,9 @@ class XrefMixin:
 class Insn(_Insn, XrefMixin):
     def follow_call(self) -> 'Insn':  # noqa: F821
         if self.data.group(ARM64_GRP_JUMP):
-            for op in self.data.operands:
-                if op.type == ARM64_OP_IMM:
-                    return next(self.disasm.disasm(op.imm + self.offset))
+            op = self.data.operands[-1]
+            if op.type == ARM64_OP_IMM:
+                return next(self.disasm.disasm(op.imm + self.offset))
 
         # TODO: raise error
 
