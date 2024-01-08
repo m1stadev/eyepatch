@@ -32,7 +32,18 @@ reference = "HEAD"
 resolved_reference = "fb92f32391c6cced868252167509590319eeb58b"
 subdirectory = "bindings/python"
 
+[[package]]
+name = "typing-extensions"
+version = "4.9.0"
+description = "Backported and Experimental Type Hints for Python 3.8+"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "typing_extensions-4.9.0-py3-none-any.whl", hash = "sha256:af72aea155e91adfc61c3ae9e0e342dbc0cba726d6cba4b6c72c1f34e47291cd"},
+    {file = "typing_extensions-4.9.0.tar.gz", hash = "sha256:23478f88c37f27d76ac8aee6c905017a143b0b1b886c3c9f66bc2fd94f9f5783"},
+]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "9f6ca0bca317d64063aac50d98a9d95689ff5b699aeb8c7be4e5c413f35ce872"
+content-hash = "49b25869725daa6695cdde24785e48cc7702df4834454d91445d83405350233f"
