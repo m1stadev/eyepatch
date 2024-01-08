@@ -2,13 +2,12 @@ from typing import Generator, Optional, Union
 
 from capstone import Cs, CsError
 
-from .insn import _Insn
-from .string import _ByteString
+import eyepatch.base
 
 
 class _Disassembler:
-    _insn = _Insn
-    _string = _ByteString
+    _insn = eyepatch.base._Insn
+    _string = eyepatch.base._ByteString
 
     def __init__(self, data: bytes, disasm: Cs):
         self._data = data
