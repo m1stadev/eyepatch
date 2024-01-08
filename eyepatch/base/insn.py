@@ -1,36 +1,55 @@
+from typing import Optional, Self
+
 from capstone import CsInsn
+
+import eyepatch.base
 
 
 class _Insn:
-    def __init__(self, disasm: '_Disassembler', data: CsInsn, offset: int):  # noqa: F821
-        self._disasm = disasm
-        self._data = data
+    def __init__(
+        self,
+        offset: int,
+        data: bytes,
+        info: Optional[CsInsn] = None,
+        patcher: Optional[eyepatch.base._Patcher] = None,
+    ):
         self._offset = offset
+        self._data = data
 
-    def __next__(self) -> '_Insn':  # noqa: F821
+        self._info = info
+        self._patcher = patcher
+
+    def __next__(self) -> Self:
         return next(self.disasm.disasm(self.offset + 0x4))
 
     def __repr__(self) -> str:
-        return f'0x{self.offset:x}: {self.data.mnemonic} {self.data.op_str}'
+        if self.info is not None:
+            insn = f'{self.info.mnemonic} {self.info.op_str}'
+            return f'0x{self.offset:x}: {self.info.mnemonic} {self.info.op_str}'
+        else:
+            insn = self.data.hex()
+
+        return f'0x{self.offset:x}: {insn}'
 
     @property
-    def data(self) -> CsInsn:
+    def data(self) -> bytes:
         return self._data
-
-    @property
-    def disasm(self) -> '_Disassembler':  # noqa: F821
-        return self._disasm
 
     @property
     def offset(self) -> int:
         return self._offset
 
-    def patch(self, data: bytes) -> '_Insn':
-        if len(data) != self.data.size:
+    @property
+    def patcher(self) -> eyepatch.base._Patcher:
+        return self._patcher
+
+    def patch(self, insn: str) -> None:
+        data = self.patcher.asm(insn)
+        if len(data) != len(data):
             raise ValueError(
                 'New instruction must be the same size as the current instruction'
             )
 
-        self.disasm._data[self.offset : self.offset + len(data)] = data
-        insn = self.disasm._disasm(code=data, offset=0)
-        return self.__class__(self, insn, self.offset)
+        self._data = data
+        self.patcher._data[self.offset : self.offset + len(data)] = data
+        self._info = self.disasm._disasm(code=data, offset=0)
