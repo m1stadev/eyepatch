@@ -46,5 +46,11 @@ class _ByteString:
             # TODO: raise error
             pass
 
+        if len(oldvalue) > len(newvalue):
+            oldvalue += b' ' * (len(newvalue) - len(oldvalue))
+        elif len(oldvalue) < len(newvalue):
+            # TODO: raise error
+            pass
+
         self._data = self._data.replace(oldvalue, newvalue, count)
         self.patcher._data[self.offset : self.offset + len(self._data)] = self._data
