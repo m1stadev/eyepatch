@@ -12,10 +12,7 @@ from capstone import (
 from capstone.arm_const import ARM_GRP_JUMP, ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
 from keystone import KS_ARCH_ARM, KS_MODE_ARM, KS_MODE_THUMB, Ks, KsError
 
-from .base.asm import _Assembler
-from .base.disasm import _Disassembler
-from .base.insn import _Insn
-from .base.string import _ByteString
+import eyepatch.base
 
 
 class XrefMixin:
@@ -54,7 +51,7 @@ class XrefMixin:
         return xref_insn
 
 
-class Insn(_Insn, XrefMixin):
+class Insn(eyepatch.base._Insn, XrefMixin):
     def follow_call(self) -> 'Insn':  # noqa: F821
         if self.data.group(ARM_GRP_JUMP):
             for op in self.data.operands:
@@ -64,11 +61,11 @@ class Insn(_Insn, XrefMixin):
         # TODO: raise error
 
 
-class ByteString(_ByteString, XrefMixin):
+class ByteString(eyepatch.base._ByteString, XrefMixin):
     pass
 
 
-class Disassembler(_Disassembler):
+class Disassembler(eyepatch.base._Disassembler):
     _insn = Insn
     _string = ByteString
 
@@ -153,7 +150,7 @@ class Disassembler(_Disassembler):
         return match
 
 
-class Assembler(_Assembler):
+class Assembler(eyepatch.base._Assembler):
     def __init__(self):
         super().__init__(asm=Ks(KS_ARCH_ARM, KS_MODE_ARM))
 
@@ -167,3 +164,16 @@ class Assembler(_Assembler):
             pass
 
         return asm
+
+
+class Patcher(Assembler, Disassembler):
+    def __init__(self, data: bytes):
+        self._data = data
+
+        self._asm = Ks(KS_ARCH_ARM, KS_MODE_ARM)
+        self._disasm = Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
+        self._disasm.detail = True
+
+        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
+        self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
+        self._thumb_disasm.detail = True
