@@ -31,7 +31,7 @@ class XrefMixin:
                 if op.mem.base != ARM_REG_PC:
                     continue
 
-                offset = insn.offset + op.mem.disp + 0x4
+                offset = (insn.offset & ~3) + op.mem.disp + 0x4
 
                 data = self.disasm.data[offset : offset + 4]
                 offset2 = unpack('<i', data)[0]
@@ -131,8 +131,7 @@ class Disassembler(_Disassembler):
                 if op.mem.base != ARM_REG_PC:
                     continue
 
-                imm_offset = insn.offset + op.mem.disp + 0x4
-
+                imm_offset = (insn.offset & ~3) + op.mem.disp + 0x4
                 data = self.data[imm_offset : imm_offset + 4]
                 insn_imm = unpack('<i', data)[0]
 

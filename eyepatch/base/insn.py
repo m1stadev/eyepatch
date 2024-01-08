@@ -8,7 +8,7 @@ class _Insn:
         self._offset = offset
 
     def __next__(self) -> '_Insn':  # noqa: F821
-        return self.__class__(next(self._disasm.disasm(self.offset + 4)))
+        return next(self.disasm.disasm(self.offset + 0x4))
 
     def __repr__(self) -> str:
         return f'0x{self.offset:x}: {self.data.mnemonic} {self.data.op_str}'
