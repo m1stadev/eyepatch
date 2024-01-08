@@ -1,3 +1,4 @@
+from sys import version_info
 from typing import Optional
 
 from capstone import CS_ARCH_ARM64, CS_MODE_ARM, Cs
@@ -12,10 +13,12 @@ from capstone.arm64_const import (
 )
 from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
-from .base.asm import _Assembler
-from .base.disasm import _Disassembler
-from .base.insn import _Insn
-from .base.string import _ByteString
+import eyepatch.base
+
+if version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class XrefMixin:
@@ -29,8 +32,8 @@ class XrefMixin:
                     skip -= 1
 
 
-class Insn(_Insn, XrefMixin):
-    def follow_call(self) -> 'Insn':  # noqa: F821
+class Insn(eyepatch.base._Insn, XrefMixin):
+    def follow_call(self) -> Self:
         if self.data.group(ARM64_GRP_JUMP):
             op = self.data.operands[-1]
             if op.type == ARM64_OP_IMM:
@@ -38,7 +41,7 @@ class Insn(_Insn, XrefMixin):
 
         # TODO: raise error
 
-    def function_begin(self) -> 'Insn':  # noqa: F821
+    def function_begin(self) -> Self:
         disasm = self.disasm.disasm(self.offset, reverse=True)
         while True:
             insn = next(disasm)
@@ -57,11 +60,11 @@ class Insn(_Insn, XrefMixin):
             return next(self.disasm.disasm(insn.offset + 4))
 
 
-class ByteString(_ByteString, XrefMixin):
+class ByteString(eyepatch.base._ByteString, XrefMixin):
     pass
 
 
-class Disassembler(_Disassembler):
+class Disassembler(eyepatch.base._Disassembler):
     _insn = Insn
     _string = ByteString
 
@@ -70,6 +73,15 @@ class Disassembler(_Disassembler):
         super().__init__(data=data, disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM))
 
 
-class Assembler(_Assembler):
+class Assembler(eyepatch.base._Assembler):
     def __init__(self):
         super().__init__(asm=Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN))
+
+
+class Patcher(Assembler, Disassembler):
+    def __init__(self, data: bytes):
+        self._data = data
+
+        self._asm = Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN)
+        self._disasm = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
+        self._disasm.detail = True
