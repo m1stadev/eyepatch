@@ -2,6 +2,9 @@ from struct import unpack
 from typing import Generator, Optional
 
 from capstone import (
+    ARM_OP_IMM,
+    ARM_OP_MEM,
+    ARM_REG_PC,
     CS_ARCH_ARM,
     CS_MODE_ARM,
     CS_MODE_LITTLE_ENDIAN,
@@ -9,65 +12,14 @@ from capstone import (
     Cs,
     CsError,
 )
-from capstone.arm_const import ARM_GRP_JUMP, ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
-from keystone import KS_ARCH_ARM, KS_MODE_ARM, KS_MODE_THUMB, Ks, KsError
 
+import eyepatch.arm
 import eyepatch.base
 
 
-class XrefMixin:
-    def xref(self, base_addr: int, skip: int = 0) -> Optional['Insn']:  # noqa: F821
-        xref_insn = None
-        for insn in self.disasm.disasm(0x0):
-            # TODO: add support for other instructions
-            if len(insn.data.operands) == 0:
-                continue
-
-            op = insn.data.operands[-1]
-            if op.type == ARM_OP_MEM:
-                if op.mem.base != ARM_REG_PC:
-                    continue
-
-                offset = (insn.offset & ~3) + op.mem.disp + 0x4
-
-                data = self.disasm.data[offset : offset + 4]
-                offset2 = unpack('<i', data)[0]
-
-                if offset2 - self.offset == base_addr:
-                    if skip == 0:
-                        xref_insn = insn
-                        break
-
-                    skip -= 1
-
-            elif op.type == ARM_OP_IMM:
-                if op.imm + insn.offset == self.offset:
-                    if skip == 0:
-                        xref_insn = insn
-                        break
-
-                    skip -= 1
-
-        return xref_insn
-
-
-class Insn(eyepatch.base._Insn, XrefMixin):
-    def follow_call(self) -> 'Insn':  # noqa: F821
-        if self.data.group(ARM_GRP_JUMP):
-            for op in self.data.operands:
-                if op.type == ARM_OP_IMM:
-                    return next(self.disasm.disasm(op.imm + self.offset))
-
-        # TODO: raise error
-
-
-class ByteString(eyepatch.base._ByteString, XrefMixin):
-    pass
-
-
 class Disassembler(eyepatch.base._Disassembler):
-    _insn = Insn
-    _string = ByteString
+    _insn = eyepatch.arm.Insn
+    _string = eyepatch.arm.ByteString
 
     def __init__(self, data: bytes):
         super().__init__(
@@ -148,32 +100,3 @@ class Disassembler(eyepatch.base._Disassembler):
                     skip -= 1
 
         return match
-
-
-class Assembler(eyepatch.base._Assembler):
-    def __init__(self):
-        super().__init__(asm=Ks(KS_ARCH_ARM, KS_MODE_ARM))
-
-        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-
-    def asm_thumb(self, insn: str) -> bytes:
-        try:
-            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
-        except KsError:
-            # TODO: Raise error
-            pass
-
-        return asm
-
-
-class Patcher(Assembler, Disassembler):
-    def __init__(self, data: bytes):
-        self._data = data
-
-        self._asm = Ks(KS_ARCH_ARM, KS_MODE_ARM)
-        self._disasm = Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
-        self._disasm.detail = True
-
-        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-        self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
-        self._thumb_disasm.detail = True
