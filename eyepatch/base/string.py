@@ -34,7 +34,7 @@ class _ByteString:
         self,
         oldvalue: Union[str, bytes],
         newvalue: Union[str, bytes],
-        count: Optional[int],
+        count: Optional[int] = None,
     ) -> None:
         if isinstance(oldvalue, str):
             oldvalue = oldvalue.encode()
