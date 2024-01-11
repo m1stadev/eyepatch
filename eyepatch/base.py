@@ -33,7 +33,7 @@ class _Insn:
         patcher: Optional['_Patcher'] = None,
     ):
         self._offset = offset
-        self._data = data
+        self._data = bytearray(data)
 
         self._info = info
         self._patcher = patcher
@@ -56,7 +56,7 @@ class _Insn:
 
     @property
     def data(self) -> bytes:
-        return self._data
+        return bytes(self._data)
 
     @property
     def offset(self) -> int:
@@ -73,7 +73,7 @@ class _Insn:
                 'New instruction must be the same size as the current instruction'
             )
 
-        self._data = data
+        self._data = bytearray(data)
         self.patcher._data[self.offset : self.offset + len(data)] = data
         self._info = self.disasm._disasm(code=data, offset=0)
 
@@ -81,7 +81,7 @@ class _Insn:
 class _ByteString:
     def __init__(self, offset: int, data: bytes, patcher: Optional['_Patcher'] = None):
         self._offset = offset
-        self._data = data
+        self._data = bytearray(data)
         self._patcher = patcher
 
     def __repr__(self) -> str:
@@ -89,7 +89,7 @@ class _ByteString:
 
     @property
     def data(self) -> bytes:
-        return self._data
+        return bytes(self._data)
 
     @property
     def string(self) -> str:
@@ -134,13 +134,13 @@ class _Disassembler:
     _string = _ByteString
 
     def __init__(self, data: bytes, disasm: Cs):
-        self._data = data
+        self._data = bytearray(data)
         self._disasm = disasm
         self._disasm.detail = True
 
     @property
     def data(self) -> bytes:
-        return self._data
+        return bytes(self._data)
 
     def disasm(
         self, offset: int, reverse: bool = False
@@ -201,7 +201,7 @@ class _Disassembler:
 
 class _Patcher(_Assembler, _Disassembler):
     def __init__(self, data: bytes, asm: Ks, disasm: Cs):
-        self._data = data
+        self._data = bytearray(data)
 
         self._asm = asm
         self._disasm = disasm
