@@ -24,8 +24,7 @@ else:
 class _XrefMixin:
     def xref(self, base_addr: int, skip: int = 0) -> Optional['Insn']:
         xref_insn = None
-        for insn in self.disasm.disasm(0x0):
-            # TODO: add support for other instructions
+        for insn in self.patcher.disasm(0x0):
             if len(insn.info.operands) == 0:
                 continue
 
@@ -36,7 +35,7 @@ class _XrefMixin:
 
                 offset = (insn.offset & ~3) + op.mem.disp + 0x4
 
-                data = self.disasm.data[offset : offset + 4]
+                data = self.patcher.data[offset : offset + 4]
                 offset2 = unpack('<i', data)[0]
 
                 if offset2 - self.offset == base_addr:
