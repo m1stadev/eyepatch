@@ -186,3 +186,12 @@ class Patcher(eyepatch.base._Patcher):
         self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
         self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
         self._thumb_disasm.detail = True
+
+    def search_thumb_insns(self, *insns: str) -> Optional[Insn]:
+        instructions = '\n'.join(insns)
+        data = self.asm_thumb(instructions)
+        offset = self.data.find(data)
+        if offset == -1:
+            return None
+
+        return next(self.disasm(offset))
