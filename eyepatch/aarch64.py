@@ -71,24 +71,14 @@ class Insn(eyepatch.base._Insn, _XrefMixin):
             return next(self.patcher.disasm(insn.offset + 4))
 
 
-class _Assembler(eyepatch.base._Assembler):
-    def __init__(self):
-        super().__init__(asm=Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN))
-
-
-class _Disassembler(eyepatch.base._Disassembler):
+class Patcher(eyepatch.base._Patcher):
     _insn = Insn
     _string = ByteString
 
     def __init__(self, data: bytes):
         # TODO: Change arch to CS_ARCH_AARCH64 when Capstone 6.0 releases
-        super().__init__(data=data, disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM))
-
-
-class Patcher(_Assembler, _Disassembler):
-    def __init__(self, data: bytes):
-        self._data = data
-
-        self._asm = Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN)
-        self._disasm = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
-        self._disasm.detail = True
+        super().__init__(
+            data=data,
+            asm=Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN),
+            disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM),
+        )

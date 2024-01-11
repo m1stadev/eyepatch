@@ -172,13 +172,16 @@ class _Disassembler(eyepatch.base._Disassembler):
         return match
 
 
-class Patcher(_Assembler, _Disassembler):
-    def __init__(self, data: bytes):
-        self._data = data
+class Patcher(eyepatch.base._Patcher):
+    _insn = Insn
+    _string = ByteString
 
-        self._asm = Ks(KS_ARCH_ARM, KS_MODE_ARM)
-        self._disasm = Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
-        self._disasm.detail = True
+    def __init__(self, data: bytes):
+        super().__init__(
+            data=data,
+            asm=Ks(KS_ARCH_ARM, KS_MODE_ARM),
+            disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN),
+        )
 
         self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
         self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
