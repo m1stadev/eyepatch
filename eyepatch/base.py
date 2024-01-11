@@ -187,8 +187,7 @@ class _Disassembler:
         index = self._data.find(string)
         if index == -1:
             return None
-
-        return self._string(self, string, index)
+        return self._string(index, string, self)
 
     def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
         for insn in self.disasm(offset):
