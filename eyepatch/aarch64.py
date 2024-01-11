@@ -53,7 +53,7 @@ class Insn(eyepatch.base._Insn, _XrefMixin):
         # TODO: raise error
 
     def function_begin(self) -> Self:
-        disasm = self.disasm.disasm(self.offset, reverse=True)
+        disasm = self.patcher.disasm(self.offset, reverse=True)
         while True:
             insn = next(disasm)
             if (insn.info.id != ARM64_INS_ADD) and (
@@ -68,7 +68,7 @@ class Insn(eyepatch.base._Insn, _XrefMixin):
             while insn.info.id in (ARM64_INS_STP, ARM64_INS_SUB):
                 insn = next(disasm)
 
-            return next(self.disasm.disasm(insn.offset + 4))
+            return next(self.patcher.disasm(insn.offset + 4))
 
 
 class _Assembler(eyepatch.base._Assembler):
