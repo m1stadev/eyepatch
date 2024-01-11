@@ -205,3 +205,12 @@ class _Patcher(_Assembler, _Disassembler):
         self._asm = asm
         self._disasm = disasm
         self._disasm.detail = True
+
+    def search_insns(self, *insns: str) -> Optional[_Insn]:
+        instructions = ';'.join(insns)
+        data = self.asm(instructions)
+        offset = self.data.find(data)
+        if offset == -1:
+            return None
+
+        return next(self.disasm(offset))
