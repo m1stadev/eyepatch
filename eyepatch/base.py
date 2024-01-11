@@ -75,7 +75,7 @@ class _Insn:
 
         self._data = bytearray(data)
         self.patcher._data[self.offset : self.offset + len(data)] = data
-        self._info = self.disasm._disasm(code=data, offset=0)
+        self._info = self.patcher.disasm(self.offset)
 
 
 class _ByteString:
