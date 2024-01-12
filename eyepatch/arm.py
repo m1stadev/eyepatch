@@ -50,6 +50,15 @@ class Patcher(eyepatch.base._Patcher):
         self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
         self._thumb_disasm.detail = True
 
+    def asm_thumb(self, insn: str) -> bytes:
+        try:
+            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
+        except KsError:
+            # TODO: Raise error
+            pass
+
+        return asm
+
     def disasm(
         self, offset: int, reverse: bool = False
     ) -> Generator[_insn, None, None]:
@@ -89,15 +98,6 @@ class Patcher(eyepatch.base._Patcher):
 
             if insn is not None:
                 yield self._insn(i, data, insn, self)
-
-    def asm_thumb(self, insn: str) -> bytes:
-        try:
-            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
-        except KsError:
-            # TODO: Raise error
-            pass
-
-        return asm
 
     def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
         match = None
