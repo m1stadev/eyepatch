@@ -35,31 +35,18 @@ class Insn(eyepatch.base._Insn):
         # TODO: raise error
 
 
-class _Assembler(eyepatch.base._Assembler):
-    def __init__(self):
-        super().__init__(asm=Ks(KS_ARCH_ARM, KS_MODE_ARM))
-
-        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-
-    def asm_thumb(self, insn: str) -> bytes:
-        try:
-            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
-        except KsError:
-            # TODO: Raise error
-            pass
-
-        return asm
-
-
-class _Disassembler(eyepatch.base._Disassembler):
+class Patcher(eyepatch.base._Patcher):
     _insn = Insn
     _string = ByteString
 
     def __init__(self, data: bytes):
         super().__init__(
-            data=data, disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN)
+            data=data,
+            asm=Ks(KS_ARCH_ARM, KS_MODE_ARM),
+            disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN),
         )
 
+        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
         self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
         self._thumb_disasm.detail = True
 
@@ -103,6 +90,15 @@ class _Disassembler(eyepatch.base._Disassembler):
             if insn is not None:
                 yield self._insn(i, data, insn, self)
 
+    def asm_thumb(self, insn: str) -> bytes:
+        try:
+            asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
+        except KsError:
+            # TODO: Raise error
+            pass
+
+        return asm
+
     def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
         match = None
         for insn in self.disasm(offset):
@@ -134,22 +130,6 @@ class _Disassembler(eyepatch.base._Disassembler):
                     skip -= 1
 
         return match
-
-
-class Patcher(eyepatch.base._Patcher):
-    _insn = Insn
-    _string = ByteString
-
-    def __init__(self, data: bytes):
-        super().__init__(
-            data=data,
-            asm=Ks(KS_ARCH_ARM, KS_MODE_ARM),
-            disasm=Cs(CS_ARCH_ARM, CS_MODE_ARM + CS_MODE_LITTLE_ENDIAN),
-        )
-
-        self._thumb_asm = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-        self._thumb_disasm = Cs(CS_ARCH_ARM, CS_MODE_THUMB + CS_MODE_LITTLE_ENDIAN)
-        self._thumb_disasm.detail = True
 
     def search_thumb_insns(self, *insns: str) -> Optional[Insn]:
         instructions = '\n'.join(insns)
