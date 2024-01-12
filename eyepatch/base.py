@@ -43,7 +43,11 @@ class _Insn:
             self._info = info
 
     def __next__(self) -> Self:
-        return next(self.disasm.disasm(self.offset + 0x4))
+        if self.patcher is None:
+            # TODO: raise error
+            pass
+
+        return next(self.patcher.disasm(self.offset + 0x4))
 
     def __repr__(self) -> str:
         if self.info is not None:
