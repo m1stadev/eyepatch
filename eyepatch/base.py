@@ -35,8 +35,12 @@ class _Insn:
         self._offset = offset
         self._data = bytearray(data)
 
-        self._info = info
         self._patcher = patcher
+
+        if self._patcher is not None and info is None:
+            self._info = next(self.patcher._disasm(data, 0))
+        else:
+            self._info = info
 
     def __next__(self) -> Self:
         return next(self.disasm.disasm(self.offset + 0x4))
