@@ -25,25 +25,11 @@ else:
     from typing_extensions import Self
 
 
-class _XrefMixin:
-    def xref(self, skip: int = 0) -> Optional['Insn']:  # noqa: F821
-        for insn in self.patcher.disasm(0x0):
-            if len(insn.info.operands) == 0:
-                continue
-
-            op = insn.info.operands[-1]
-            if op.type == ARM64_OP_IMM and (op.imm + insn.offset) == self.offset:
-                if skip == 0:
-                    return insn
-
-                skip -= 1
-
-
-class ByteString(eyepatch.base._ByteString, _XrefMixin):
+class ByteString(eyepatch.base._ByteString):
     pass
 
 
-class Insn(eyepatch.base._Insn, _XrefMixin):
+class Insn(eyepatch.base._Insn):
     def follow_call(self) -> Self:
         if self.info.group(ARM64_GRP_JUMP):
             op = self.info.operands[-1]
@@ -82,3 +68,15 @@ class Patcher(eyepatch.base._Patcher):
             asm=Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN),
             disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM),
         )
+
+    def search_xref(self, offset: int, skip: int = 0) -> Optional[_insn]:  # noqa: F821
+        for insn in self.disasm(0x0):
+            if len(insn.info.operands) == 0:
+                continue
+
+            op = insn.info.operands[-1]
+            if op.type == ARM64_OP_IMM and (op.imm + insn.offset) == offset:
+                if skip == 0:
+                    return insn
+
+                skip -= 1
