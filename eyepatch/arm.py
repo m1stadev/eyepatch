@@ -21,46 +21,11 @@ else:
     from typing_extensions import Self
 
 
-class _XrefMixin:
-    def xref(self, base_addr: int, skip: int = 0) -> Optional['Insn']:
-        xref_insn = None
-        for insn in self.patcher.disasm(0x0):
-            if len(insn.info.operands) == 0:
-                continue
-
-            op = insn.info.operands[-1]
-            if op.type == ARM_OP_MEM:
-                if op.mem.base != ARM_REG_PC:
-                    continue
-
-                offset = (insn.offset & ~3) + op.mem.disp + 0x4
-
-                data = self.patcher.data[offset : offset + 4]
-                offset2 = unpack('<i', data)[0]
-
-                if offset2 - self.offset == base_addr:
-                    if skip == 0:
-                        xref_insn = insn
-                        break
-
-                    skip -= 1
-
-            elif op.type == ARM_OP_IMM:
-                if op.imm + insn.offset == self.offset:
-                    if skip == 0:
-                        xref_insn = insn
-                        break
-
-                    skip -= 1
-
-        return xref_insn
-
-
-class ByteString(eyepatch.base._ByteString, _XrefMixin):
+class ByteString(eyepatch.base._ByteString):
     pass
 
 
-class Insn(eyepatch.base._Insn, _XrefMixin):
+class Insn(eyepatch.base._Insn):
     def follow_call(self) -> Self:
         if self.info.group(ARM_GRP_JUMP):
             op = self.info.operands[-1]
@@ -194,3 +159,38 @@ class Patcher(eyepatch.base._Patcher):
             return None
 
         return next(self.disasm(offset))
+
+    def search_xref(
+        self, offset: int, base_addr: int, skip: int = 0
+    ) -> Optional['Insn']:
+        xref_insn = None
+        for insn in self.patcher.disasm(0x0):
+            if len(insn.info.operands) == 0:
+                continue
+
+            op = insn.info.operands[-1]
+            if op.type == ARM_OP_MEM:
+                if op.mem.base != ARM_REG_PC:
+                    continue
+
+                insn_offset = (insn.offset & ~3) + op.mem.disp + 0x4
+
+                data = self.patcher.data[insn_offset : insn_offset + 4]
+                offset2 = unpack('<i', data)[0]
+
+                if offset2 - offset == base_addr:
+                    if skip == 0:
+                        xref_insn = insn
+                        break
+
+                    skip -= 1
+
+            elif op.type == ARM_OP_IMM:
+                if op.imm + insn.offset == offset:
+                    if skip == 0:
+                        xref_insn = insn
+                        break
+
+                    skip -= 1
+
+        return xref_insn
