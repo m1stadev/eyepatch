@@ -180,6 +180,14 @@ class _Disassembler:
 
                 skip -= 1
 
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
+        for insn in self.disasm(offset):
+            if any(imm == op.imm for op in insn.info.operands):
+                if skip == 0:
+                    return insn
+
+                skip -= 1
+
     def search_string(self, string: Union[str, bytes]) -> Optional[_string]:
         if isinstance(string, str):
             string = string.encode()
@@ -188,14 +196,6 @@ class _Disassembler:
         if index == -1:
             return None
         return self._string(index, string, self)
-
-    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
-        for insn in self.disasm(offset):
-            if any(imm == op.imm for op in insn.info.operands):
-                if skip == 0:
-                    return insn
-
-                skip -= 1
 
 
 class _Patcher(_Assembler, _Disassembler):
