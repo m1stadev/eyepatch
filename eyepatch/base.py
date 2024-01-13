@@ -206,25 +206,38 @@ class _Disassembler:
         self,
         string: Optional[Union[str, bytes]] = None,
         offset: Optional[int] = None,
-        end: Optional[bool] = False,
+        skip: int = 0,
+        exact: bool = False,
     ) -> Optional[_string]:
         if string is not None:
             if isinstance(string, str):
                 string = string.encode()
 
-            start = self._data.find(string)
-            if start == -1:
-                return None
+            if exact:
+                str_begin = self._data.find(b'\0' + string + b'\0') + 1
+                if str_begin == 0:
+                    return
+
+                str_end = str_begin + len(string)
+            else:
+                part_str = self._data.find(string)
+                while skip > 0:
+                    part_str = self._data.find(string, part_str + 1)
+                    skip -= 1
+
+                str_begin = self.data.rfind(b'\0', 0, part_str) + 1
+                str_end = self.data.find(b'\0', part_str)
 
         elif offset is not None:
-            start = offset
+            # Assume if offset is provided, it points to the start
+            # of the string
+            str_begin = offset
+            str_end = self.data.find(b'\0', str_begin)
 
-        if end is True:
-            end = start + len(string)
         else:
-            end = self._data.find(b'\0', start)
+            raise ValueError('Either string or offset must be provided.')
 
-        return self._string(start, self._data[start:end], self)
+        return self._string(str_begin, self._data[str_begin:str_end], self)
 
 
 class _Patcher(_Assembler, _Disassembler):
