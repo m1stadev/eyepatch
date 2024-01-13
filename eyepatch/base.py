@@ -196,14 +196,22 @@ class _Disassembler:
 
                 skip -= 1
 
-    def search_string(self, string: Union[str, bytes]) -> Optional[_string]:
+    def search_string(
+        self, string: Union[str, bytes], end: Optional[bool] = False
+    ) -> Optional[_string]:
         if isinstance(string, str):
             string = string.encode()
 
-        index = self._data.find(string)
-        if index == -1:
+        start = self._data.find(string)
+        if start == -1:
             return None
-        return self._string(index, string, self)
+
+        if end is True:
+            end = start + len(string)
+        else:
+            end = self._data.find(b'\0', start)
+
+        return self._string(start, self._data[start:end], self)
 
 
 class _Patcher(_Assembler, _Disassembler):
