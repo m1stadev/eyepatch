@@ -42,6 +42,12 @@ class _Insn:
         else:
             self._info = info
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, _Insn):
+            return False
+
+        return self.data == other.data
+
     def __next__(self) -> Self:
         if self.patcher is None:
             # TODO: raise error
@@ -197,14 +203,21 @@ class _Disassembler:
                 skip -= 1
 
     def search_string(
-        self, string: Union[str, bytes], end: Optional[bool] = False
+        self,
+        string: Optional[Union[str, bytes]] = None,
+        offset: Optional[int] = None,
+        end: Optional[bool] = False,
     ) -> Optional[_string]:
-        if isinstance(string, str):
-            string = string.encode()
+        if string is not None:
+            if isinstance(string, str):
+                string = string.encode()
 
-        start = self._data.find(string)
-        if start == -1:
-            return None
+            start = self._data.find(string)
+            if start == -1:
+                return None
+
+        elif offset is not None:
+            start = offset
 
         if end is True:
             end = start + len(string)
