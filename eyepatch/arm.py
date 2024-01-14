@@ -13,6 +13,7 @@ from capstone import (
 from capstone.arm_const import ARM_GRP_JUMP, ARM_OP_IMM, ARM_OP_MEM, ARM_REG_PC
 from keystone import KS_ARCH_ARM, KS_MODE_ARM, KS_MODE_THUMB, Ks, KsError
 
+import eyepatch
 import eyepatch.base
 
 if version_info >= (3, 11):
@@ -32,7 +33,7 @@ class Insn(eyepatch.base._Insn):
             if op.type == ARM_OP_IMM:
                 return next(self.patcher.disasm(op.imm + self.offset))
 
-        # TODO: raise error
+        raise eyepatch.InsnError('Instruction is not a call')
 
 
 class Patcher(eyepatch.base._Patcher):
@@ -54,8 +55,9 @@ class Patcher(eyepatch.base._Patcher):
         try:
             asm, _ = self._thumb_asm.asm(insn, as_bytes=True)
         except KsError:
-            # TODO: Raise error
-            pass
+            raise eyepatch.AssemblyError(
+                f'Failed to assemble ARM thumb instruction: {insn}'
+            )
 
         return asm
 
@@ -63,14 +65,14 @@ class Patcher(eyepatch.base._Patcher):
         self, offset: int, reverse: bool = False
     ) -> Generator[_insn, None, None]:
         if reverse:
-            len_check = offset - 2 > 0
+            len_check = offset - 4 > 0
             range_obj = range(offset, 0, -2)
         else:
-            len_check = offset + 2 < len(self._data)
+            len_check = offset + 4 < len(self._data)
             range_obj = range(offset, len(self._data), 2)
 
         if not len_check:
-            return  # TODO: Raise error
+            raise ValueError('Offset is outside of data range')
 
         for i in range_obj:
             if reverse:
@@ -83,7 +85,10 @@ class Patcher(eyepatch.base._Patcher):
             # disassemble 4 bytes as arm insn
             insn = None
             for size in (2, 4):
-                data = self._data[i : i + size]
+                try:
+                    data = self._data[i : i + size]
+                except IndexError:
+                    return
 
                 try:
                     insn = next(self._thumb_disasm.disasm(code=data, offset=0))
@@ -99,8 +104,7 @@ class Patcher(eyepatch.base._Patcher):
             if insn is not None:
                 yield self._insn(i, data, insn, self)
 
-    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
-        match = None
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> _insn:
         for insn in self.disasm(offset):
             if len(insn.info.operands) == 0:
                 continue
@@ -116,20 +120,20 @@ class Patcher(eyepatch.base._Patcher):
 
                 if insn_imm == imm:
                     if skip == 0:
-                        match = insn
-                        break
+                        return insn
 
                     skip -= 1
 
             elif op.type == ARM_OP_IMM:
                 if op.imm == imm:
                     if skip == 0:
-                        match = insn
-                        break
+                        return insn
 
                     skip -= 1
-
-        return match
+        else:
+            raise eyepatch.SearchError(
+                f'Failed to find instruction with immediate value: {hex(imm)}'
+            )
 
     def search_thumb_insns(self, *insns: str) -> Optional[Insn]:
         instructions = '\n'.join(insns)
@@ -143,7 +147,6 @@ class Patcher(eyepatch.base._Patcher):
     def search_xref(
         self, offset: int, base_addr: int, skip: int = 0
     ) -> Optional['Insn']:
-        xref_insn = None
         for insn in self.patcher.disasm(0x0):
             if len(insn.info.operands) == 0:
                 continue
@@ -160,17 +163,15 @@ class Patcher(eyepatch.base._Patcher):
 
                 if offset2 - offset == base_addr:
                     if skip == 0:
-                        xref_insn = insn
-                        break
+                        return insn
 
                     skip -= 1
 
             elif op.type == ARM_OP_IMM:
                 if op.imm + insn.offset == offset:
                     if skip == 0:
-                        xref_insn = insn
-                        break
+                        return insn
 
                     skip -= 1
 
-        return xref_insn
+        raise eyepatch.SearchError(f'Failed to find xrefs to offset: 0x{offset:x}')

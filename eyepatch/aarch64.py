@@ -17,6 +17,7 @@ from capstone.arm64_const import (
 )
 from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
+import eyepatch
 import eyepatch.base
 
 if version_info >= (3, 11):
@@ -36,12 +37,16 @@ class Insn(eyepatch.base._Insn):
             if op.type == ARM64_OP_IMM:
                 return next(self.patcher.disasm(op.imm + self.offset))
 
-        # TODO: raise error
+        raise eyepatch.InsnError('Instruction is not a call')
 
     def function_begin(self) -> Self:
         disasm = self.patcher.disasm(self.offset, reverse=True)
         while True:
-            insn = next(disasm)
+            try:
+                insn = next(disasm)
+            except StopIteration:
+                raise eyepatch.DisassemblyError('Failed to find beginning of function')
+
             if (insn.info.id != ARM64_INS_ADD) and (
                 [op.reg for op in insn.info.operands[:2]]
                 != [ARM64_REG_X29, ARM64_REG_SP]
@@ -80,3 +85,5 @@ class Patcher(eyepatch.base._Patcher):
                     return insn
 
                 skip -= 1
+
+        raise eyepatch.SearchError(f'Failed to find xrefs to offset: 0x{offset:x}')

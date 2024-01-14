@@ -4,6 +4,8 @@ from typing import Generator, Optional, Union
 from capstone import Cs, CsError, CsInsn
 from keystone import Ks, KsError
 
+import eyepatch
+
 if version_info >= (3, 11):
     from typing import Self
 else:
@@ -18,8 +20,7 @@ class _Assembler:
         try:
             asm, _ = self._asm.asm(insn, as_bytes=True)
         except KsError:
-            # TODO: Raise error
-            pass
+            raise eyepatch.AssemblyError(f'Failed to assemble instruction: {insn}')
 
         return asm
 
@@ -29,18 +30,13 @@ class _Insn:
         self,
         offset: int,
         data: bytes,
-        info: Optional[CsInsn] = None,
-        patcher: Optional['_Patcher'] = None,
+        info: CsInsn,
+        patcher: '_Patcher',
     ):
         self._offset = offset
         self._data = bytearray(data)
-
         self._patcher = patcher
-
-        if self._patcher is not None and info is None:
-            self._info = next(self.patcher._disasm(data, 0))
-        else:
-            self._info = info
+        self._info = info
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, _Insn):
@@ -49,10 +45,6 @@ class _Insn:
         return self.data == other.data
 
     def __next__(self) -> Self:
-        if self.patcher is None:
-            # TODO: raise error
-            pass
-
         return next(self.patcher.disasm(self.offset + 0x4))
 
     def __repr__(self) -> str:
@@ -65,7 +57,7 @@ class _Insn:
         return f'0x{self.offset:x}: {insn}'
 
     @property
-    def info(self) -> Optional[CsInsn]:
+    def info(self) -> CsInsn:
         return self._info
 
     @property
@@ -77,7 +69,7 @@ class _Insn:
         return self._offset
 
     @property
-    def patcher(self) -> Optional['_Patcher']:
+    def patcher(self) -> '_Patcher':
         return self._patcher
 
     def patch(self, insn: str) -> None:
@@ -93,7 +85,7 @@ class _Insn:
 
 
 class _ByteString:
-    def __init__(self, offset: int, data: bytes, patcher: Optional['_Patcher'] = None):
+    def __init__(self, offset: int, data: bytes, patcher: '_Patcher' = None):
         self._offset = offset
         self._data = bytearray(data)
         self._patcher = patcher
@@ -114,7 +106,7 @@ class _ByteString:
         return self._offset
 
     @property
-    def patcher(self) -> Optional['_Patcher']:
+    def patcher(self) -> '_Patcher':
         return self._patcher
 
     def replace(
@@ -130,14 +122,13 @@ class _ByteString:
             newvalue = newvalue.encode()
 
         if oldvalue not in self._data:
-            # TODO: raise error
-            pass
+            raise ValueError(f'"{oldvalue}" is not in string.')
 
         if len(oldvalue) > len(newvalue):
             oldvalue += b' ' * (len(newvalue) - len(oldvalue))
+
         elif len(oldvalue) < len(newvalue):
-            # TODO: raise error
-            pass
+            raise ValueError("New value can't be longer than old value.")
 
         self._data = self._data.replace(oldvalue, newvalue, count)
         self.patcher._data[self.offset : self.offset + len(self._data)] = self._data
@@ -167,7 +158,7 @@ class _Disassembler:
             range_obj = range(offset, len(self._data), 4)
 
         if not len_check:
-            return  # TODO: Raise error
+            raise ValueError('Offset is outside of data range')
 
         for i in range_obj:
             if reverse:
@@ -194,13 +185,19 @@ class _Disassembler:
 
                 skip -= 1
 
-    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> Optional[_insn]:
+        raise eyepatch.SearchError(f'Failed to find instruction: {insn_name}')
+
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> _insn:
         for insn in self.disasm(offset):
             if any(imm == op.imm for op in insn.info.operands):
                 if skip == 0:
                     return insn
 
                 skip -= 1
+
+        raise eyepatch.SearchError(
+            f'Failed to find instruction with immediate value: {hex(imm)}'
+        )
 
     def search_string(
         self,
@@ -216,7 +213,7 @@ class _Disassembler:
             if exact:
                 str_begin = self._data.find(b'\0' + string + b'\0') + 1
                 if str_begin == 0:
-                    return
+                    raise eyepatch.SearchError(f'Failed to find string: {string}')
 
                 str_end = str_begin + len(string)
             else:
@@ -251,8 +248,9 @@ class _Patcher(_Assembler, _Disassembler):
     def search_insns(self, *insns: str) -> Optional[_Insn]:
         instructions = ';'.join(insns)
         data = self.asm(instructions)
+
         offset = self.data.find(data)
         if offset == -1:
-            return None
+            raise eyepatch.SearchError(f'Failed to find instructions: {instructions}')
 
         return next(self.disasm(offset))
