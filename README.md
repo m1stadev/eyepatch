@@ -20,6 +20,8 @@ An *OS bootchain patching library, written in Python.</a>
 
 ## Features
 - Supports 32-bit and 64-bit ARM
+- Attempts to provide a Pythonic API
+- Provides convenience functions, like identifying strings & cross-references
 
 ## Usage
 - The `eyepatch` module provides `AArch64Patcher` and `ARMPatcher` classes for 64-bit and 32-bit patching, respectively.
