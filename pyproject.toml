@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "eyepatch"
 version = "0.1"
-description = "A *OS bootchain patcher."
+description = "An *OS bootchain patching library."
 authors = ["m1stadev <adamhamdi31@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -9,8 +9,8 @@ repository = "https://github.com/m1stadev/eyepatch"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-keystone-engine = { git = "https://github.com/keystone-engine/keystone.git", subdirectory = "bindings/python" }
-capstone = { git = "https://github.com/capstone-engine/capstone.git", subdirectory = "bindings/python", tag = "5.0.1"}
+capstone = "^5.0.1"
+keystone-engine = "^0.9.2"
 typing-extensions = "^4.0.0"
 loguru = "^0.7.2"
 
