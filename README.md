@@ -23,7 +23,7 @@ An *OS bootchain patching library, written in Python.</a>
 
 ## Usage
 - The `eyepatch` module provides `AArch64Patcher` and `ARMPatcher` classes for 64-bit and 32-bit patching, respectively.
-- A good example for the API is the [64-bit iBoot patcher](https://github.com/m1stadev/eyepatch/tree/master/iboot) 
+- A good example for the API is the [64-bit iBoot patcher](https://github.com/m1stadev/eyepatch/tree/master/iboot).
 
 ## Requirements
 - Python 3.8 or higher
@@ -38,6 +38,7 @@ An *OS bootchain patching library, written in Python.</a>
 - Add logging
 - Add more modules for different patchers
 - Add a CLI tool
+- Push to PyPI
 
 ## Support
 
