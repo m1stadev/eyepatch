@@ -12,6 +12,7 @@ python = "^3.8"
 keystone-engine = { git = "https://github.com/keystone-engine/keystone.git", subdirectory = "bindings/python" }
 capstone = { git = "https://github.com/capstone-engine/capstone.git", subdirectory = "bindings/python", tag = "5.0.1"}
 typing-extensions = "^4.0.0"
+loguru = "^0.7.2"
 
 [tool.ruff.lint]
 extend-select = ["I"]
