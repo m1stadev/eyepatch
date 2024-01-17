@@ -205,7 +205,7 @@ class _Disassembler:
         offset: Optional[int] = None,
         skip: int = 0,
         exact: bool = False,
-    ) -> Optional[_string]:
+    ) -> _string:
         if string is not None:
             if isinstance(string, str):
                 string = string.encode()
@@ -221,6 +221,9 @@ class _Disassembler:
                 while skip > 0:
                     part_str = self._data.find(string, part_str + 1)
                     skip -= 1
+
+                if part_str == -1:
+                    raise eyepatch.SearchError(f'Failed to find string: {string}')
 
                 str_begin = self.data.rfind(b'\0', 0, part_str) + 1
                 str_end = self.data.find(b'\0', part_str)
