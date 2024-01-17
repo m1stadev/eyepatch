@@ -4,7 +4,7 @@ from struct import unpack
 from capstone.arm64_const import ARM64_INS_MOV, ARM64_INS_MOVK
 
 from eyepatch import AArch64Patcher
-from eyepatch.iboot import errors, iBootStage, iBootVersion
+from eyepatch.iboot import errors, types
 
 
 class iBoot64Patcher(AArch64Patcher):
@@ -20,7 +20,7 @@ class iBoot64Patcher(AArch64Patcher):
     @cached_property
     def build_style(self) -> str:
         # While the build-style string exists in stage 1, it isn't referenced by anything else.
-        if self.stage != iBootStage.STAGE_2:  # noqa: F405
+        if self.stage != types.iBootStage.STAGE_2:  # noqa: F405
             raise errors.InvalidStage('build-style only available on stage 2 iBoot')
 
         # Find "_sys_setup_default_environment"
@@ -60,23 +60,23 @@ class iBoot64Patcher(AArch64Patcher):
         raise errors.InvalidPlatform(f'Unknown platform: "{chip_id.string}"')
 
     @cached_property
-    def stage(self) -> iBootStage:
+    def stage(self) -> types.iBootStage:
         for stage1 in ('iBootStage1', 'iBSS', 'LLB'):
             if self.search_string(f'{stage1} for ') is not None:
-                return iBootStage.STAGE_1
+                return types.iBootStage.STAGE_1
 
         for stage2 in ('iBootStage2', 'iBEC', 'iBoot'):
             if self.search_string(f'{stage2} for ') is not None:
-                return iBootStage.STAGE_2
+                return types.iBootStage.STAGE_2
 
     @cached_property
-    def version(self) -> iBootVersion:
+    def version(self) -> types.iBootVersion:
         version_str = self.search_string('iBoot-')
         major, minor, patch = version_str.string[6:].split('.', maxsplit=2)
-        return iBootVersion(int(major), int(minor), int(patch))
+        return types.iBootVersion(int(major), int(minor), int(patch))
 
     def patch_freshnonce(self) -> None:
-        if self.stage == iBootStage.STAGE_1:
+        if self.stage == types.iBootStage.STAGE_1:
             raise errors.InvalidStage(
                 'freshnonce patch only available on stage 2 iBoot'
             )
@@ -98,7 +98,7 @@ class iBoot64Patcher(AArch64Patcher):
         bl_2.patch('mov x0, #1')
 
     def patch_nvram(self):
-        if self.stage == iBootStage.STAGE_1:
+        if self.stage == types.iBootStage.STAGE_1:
             raise errors.InvalidStage('NVRAM patch only available on stage 2 iBoot')
 
         debug_str = self.search_string('debug-uarts')
