@@ -147,7 +147,7 @@ class Patcher(eyepatch.base._Patcher):
     def search_xref(
         self, offset: int, base_addr: int, skip: int = 0
     ) -> Optional['Insn']:
-        for insn in self.patcher.disasm(0x0):
+        for insn in self.disasm(0x0):
             if len(insn.info.operands) == 0:
                 continue
 
@@ -158,7 +158,7 @@ class Patcher(eyepatch.base._Patcher):
 
                 insn_offset = (insn.offset & ~3) + op.mem.disp + 0x4
 
-                data = self.patcher.data[insn_offset : insn_offset + 4]
+                data = self.data[insn_offset : insn_offset + 4]
                 offset2 = unpack('<i', data)[0]
 
                 if offset2 - offset == base_addr:
