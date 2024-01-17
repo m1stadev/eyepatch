@@ -76,7 +76,7 @@ class iBoot64Patcher(AArch64Patcher):
         return types.iBootVersion(int(major), int(minor), int(patch))
 
     def patch_freshnonce(self) -> None:
-        if self.stage == types.iBootStage.STAGE_1:
+        if self.stage == types.iBootStage.STAGE_2:
             raise errors.InvalidStage(
                 'freshnonce patch only available on stage 2 iBoot'
             )
@@ -98,7 +98,7 @@ class iBoot64Patcher(AArch64Patcher):
         bl_2.patch('mov x0, #1')
 
     def patch_nvram(self):
-        if self.stage == types.iBootStage.STAGE_1:
+        if self.stage == types.iBootStage.STAGE_2:
             raise errors.InvalidStage('NVRAM patch only available on stage 2 iBoot')
 
         debug_str = self.search_string('debug-uarts')
