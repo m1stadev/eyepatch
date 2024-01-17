@@ -9,5 +9,5 @@ class InvalidStage(iBootError):
     pass
 
 
-class UnknownPlatform(iBootError):
+class InvalidPlatform(iBootError):
     pass
