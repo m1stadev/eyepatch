@@ -110,7 +110,8 @@ class iBoot64Patcher(AArch64Patcher):
         offset = self.data.find((debug_str.offset + self.base).to_bytes(0x8, 'little'))
         while True:
             data = self.data[offset : offset + 0x8]
-            if unpack('<Q', data)[0] == 0x8:
+            if unpack('<Q', data)[0] == 0x0:
+                offset += 0x8
                 break
 
             offset -= 0x8
