@@ -140,20 +140,24 @@ class iBoot64Patcher(AArch64Patcher):
 
     def patch_sigchecks(self):
         # find "_image4_validate_property_callback_interposer"
-        mov = self.search_insns('mov w8, #0x4348', 'movk w8, #0x424e, lsl #16')
-        if mov is None:  # just in case search_insns() fails, try finding it manually
-            disasm = self.disasm(0x0)
-            while True:
-                mov = next(disasm)
-                if mov.info.id != ARM64_INS_MOV:
-                    continue
+        disasm = self.disasm(0x0)
+        while True:
+            mov = next(disasm)
+            if mov.info.id != ARM64_INS_MOV:
+                continue
 
-                if (movk := next(disasm)).info.id != ARM64_INS_MOVK:
-                    continue
+            if (movk := next(disasm)).info.id != ARM64_INS_MOVK:
+                continue
 
+            if mov.info.operands[-1].imm == 0x4348:
                 bnch = (movk.info.operands[-1].imm << 16) | mov.info.operands[-1].imm
-                if bnch == int.from_bytes(b'BNCH', 'big'):
-                    break
+            elif mov.info.operands[-1].imm == 0x424E0000:
+                bnch = mov.info.operands[-1].imm | movk.info.operands[-1].imm
+            else:
+                continue
+
+            if bnch == int.from_bytes(b'BNCH', 'big'):
+                break
 
         ret = self.search_insn('ret', mov.offset)
 
