@@ -1,7 +1,7 @@
 from functools import cached_property
 from struct import unpack
 
-from capstone.arm64_const import ARM64_INS_MOV, ARM64_INS_MOVK
+from capstone.arm64_const import ARM64_INS_BL, ARM64_INS_MOV, ARM64_INS_MOVK
 
 from eyepatch import AArch64Patcher, errors
 from eyepatch.iboot import types
@@ -21,7 +21,7 @@ class iBoot64Patcher(AArch64Patcher):
     @cached_property
     def build_style(self) -> str:
         # While the build-style string exists in stage 1, it isn't referenced by anything else.
-        if self.stage != types.iBootStage.STAGE_2:  # noqa: F405
+        if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('build-style only available on stage 2 iBoot')
 
         # Find "_sys_setup_default_environment"
@@ -86,13 +86,24 @@ class iBoot64Patcher(AArch64Patcher):
         if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('freshnonce patch only available on stage 2 iBoot')
 
-        # Find "_UpdateDeviceTree" function
-        bn_str = self.search_string('boot-nonce', exact=True)
-        bn_xref = self.search_xref(bn_str.offset)
-        bl = self.search_insn('bl', bn_xref.offset, skip=1)
+        # Find "platform_get_usb_more_other_string" function
+        nonc_str = self.search_string(' NONC:', exact=True)
+        nonc_xref = self.search_xref(nonc_str.offset)
+
+        # Find "platform_get_nonce" function
+        disasm = self.disasm(nonc_xref.offset, reverse=True)
+        skip = 1
+        while True:
+            bl = next(disasm)
+            if bl.info.id == ARM64_INS_BL:
+                if skip == 0:
+                    break
+
+                skip -= 1
+
         func = bl.follow_call()
 
-        # nop out tbnz instruction
+        # Make "platform_consume_nonce" always be called
         insn = self.search_insn('tbnz', func.offset)
         insn.patch('nop')
 
