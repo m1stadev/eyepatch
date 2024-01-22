@@ -173,12 +173,9 @@ class _Disassembler:
                 pass
 
     def search_insn(
-        self,
-        insn_name: str,
-        offset: int = 0,
-        skip: int = 0,
+        self, insn_name: str, offset: int = 0, skip: int = 0, reverse: bool = False
     ) -> Optional[_insn]:
-        for insn in self.disasm(offset):
+        for insn in self.disasm(offset, reverse):
             if insn.info.mnemonic == insn_name:
                 if skip == 0:
                     return insn
