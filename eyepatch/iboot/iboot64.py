@@ -1,7 +1,7 @@
 from functools import cached_property
 from struct import unpack
 
-from capstone.arm64_const import ARM64_INS_CBZ, ARM64_INS_MOV, ARM64_INS_MOVK
+from capstone.arm64_const import ARM64_INS_MOV, ARM64_INS_MOVK
 
 from eyepatch import AArch64Patcher, errors
 from eyepatch.iboot import types
@@ -91,13 +91,8 @@ class iBoot64Patcher(AArch64Patcher):
         nonc_xref = self.search_xref(nonc_str.offset)
 
         # Find "platform_get_nonce" function
-        disasm = self.disasm(nonc_xref.offset, reverse=True)
-        while True:
-            insn = next(disasm)
-            if insn.info.id == ARM64_INS_CBZ:
-                break
-
-            bl = self.search_insn('bl', insn.offset)
+        cbz = self.search_insn('cbz', nonc_xref.offset, reverse=True)
+        bl = self.search_insn('bl', cbz.offset)
 
         func = bl.follow_call()
 
