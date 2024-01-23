@@ -74,7 +74,7 @@ class _Insn:
 
     def patch(self, insn: str) -> None:
         data = self.patcher.asm(insn)
-        if len(data) != len(data):
+        if len(data) != len(self.data):
             raise ValueError(
                 'New instruction must be the same size as the current instruction'
             )
