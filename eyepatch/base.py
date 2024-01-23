@@ -45,7 +45,7 @@ class _Insn:
         return self.data == other.data
 
     def __next__(self) -> Self:
-        return next(self.patcher.disasm(self.offset + 0x4))
+        return next(self.patcher.disasm(self.offset + len(self.data)))
 
     def __repr__(self) -> str:
         if self.info is not None:
