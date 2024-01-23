@@ -35,6 +35,21 @@ class Insn(eyepatch.base._Insn):
 
         raise eyepatch.InsnError('Instruction is not a call')
 
+    def patch(self, insn: str) -> None:
+        if self.info._cs.mode & CS_MODE_THUMB:
+            data = self.patcher.asm_thumb(insn)
+        else:
+            data = self.patcher.asm(insn)
+
+        if len(data) != len(data):
+            raise ValueError(
+                'New instruction must be the same size as the current instruction'
+            )
+
+        self._data = bytearray(data)
+        self.patcher._data[self.offset : self.offset + len(data)] = data
+        self._info = self.patcher.disasm(self.offset)
+
 
 class Patcher(eyepatch.base._Patcher):
     _insn = Insn
