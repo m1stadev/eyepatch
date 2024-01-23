@@ -79,7 +79,12 @@ class Patcher(eyepatch.base._Patcher):
     def disasm(
         self, offset: int, reverse: bool = False
     ) -> Generator[_insn, None, None]:
-        while offset < len(self._data):
+        if reverse:
+            loop = offset > 0
+        else:
+            loop = offset < len(self._data)
+
+        while loop:
             # disassemble as 16-bit thumb insn
             if reverse:
                 if (offset - 2) == 0:
