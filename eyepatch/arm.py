@@ -79,45 +79,79 @@ class Patcher(eyepatch.base._Patcher):
     def disasm(
         self, offset: int, reverse: bool = False
     ) -> Generator[_insn, None, None]:
-        if reverse:
-            len_check = offset - 4 > 0
-            range_obj = range(offset, 0, -2)
-        else:
-            len_check = offset + 4 < len(self._data)
-            range_obj = range(offset, len(self._data), 2)
-
-        if not len_check:
-            raise ValueError('Offset is outside of data range')
-
-        for i in range_obj:
+        while offset < len(self._data):
+            # disassemble as 16-bit thumb insn
             if reverse:
-                i -= 4
+                if (offset - 2) == 0:
+                    raise ValueError('Offset is outside of data range')
 
-            # ugly code but it works(-ish)
-            # try in the following order:
-            # disassemble 2 bytes as thumb insn
-            # disassemble 4 bytes as thumb insn
-            # disassemble 4 bytes as arm insn
-            insn = None
-            for size in (2, 4):
-                try:
-                    data = self._data[i : i + size]
-                except IndexError:
-                    return
+                data = self._data[offset - 2 : offset]
 
-                try:
-                    insn = next(self._thumb_disasm.disasm(code=data, offset=0))
-                    break
-                except (CsError, StopIteration):
-                    if size == 4:
-                        try:
-                            insn = next(self._disasm.disasm(code=data, offset=0))
-                            break
-                        except (CsError, StopIteration):
-                            pass
+            else:
+                if (offset + 2) > len(self._data):
+                    raise ValueError('Offset is outside of data range')
 
-            if insn is not None:
-                yield self._insn(i, data, insn, self)
+                data = self._data[offset : offset + 2]
+
+            try:
+                insn = next(self._thumb_disasm.disasm(code=data, offset=0))
+
+                if reverse:
+                    offset -= 2
+
+                yield self._insn(offset, data, insn, self)
+
+                if not reverse:
+                    offset += 2
+
+                continue
+
+            except (CsError, StopIteration):
+                pass
+
+            # disassemble as 32-bit thumb insn
+            if reverse:
+                if (offset - 4) == 0:
+                    raise ValueError('Offset is outside of data range')
+
+                data = self._data[offset - 4 : offset]
+
+            else:
+                if (offset + 4) > len(self._data):
+                    raise ValueError('Offset is outside of data range')
+
+                data = self._data[offset : offset + 4]
+
+            try:
+                insn = next(self._thumb_disasm.disasm(code=data, offset=0))
+
+                if reverse:
+                    offset -= 4
+
+                yield self._insn(offset, data, insn, self)
+
+                if not reverse:
+                    offset += 4
+
+                continue
+
+            except (CsError, StopIteration):
+                pass
+
+            # disassemble as 32-bit arm insn
+            try:
+                insn = next(self._disasm.disasm(code=data, offset=0))
+
+                if reverse:
+                    offset -= 4
+
+                yield self._insn(offset, data, insn, self)
+
+                if not reverse:
+                    offset += 4
+
+            except (CsError, StopIteration):
+                pass
 
     def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> _insn:
         for insn in self.disasm(offset):
