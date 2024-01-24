@@ -127,7 +127,7 @@ class iBoot64Patcher(AArch64Patcher):
 
         while True:
             data = self.data[offset : offset + 0x8]
-            if unpack('<Q', data)[0] == 0x8:
+            if unpack('<Q', data)[0] == 0x0:
                 break
 
             offset += 0x8
