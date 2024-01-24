@@ -155,8 +155,13 @@ class Patcher(eyepatch.base._Patcher):
                 if not reverse:
                     offset += 4
 
+                continue
+
             except (CsError, StopIteration):
                 pass
+
+            # all else fails, just increment offset by 2
+            offset += 2
 
     def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> _insn:
         for insn in self.disasm(offset):
