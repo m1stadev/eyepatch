@@ -47,10 +47,13 @@ class Insn(eyepatch.base._Insn):
             except StopIteration:
                 raise eyepatch.DisassemblyError('Failed to find beginning of function')
 
-            if (insn.info.id != ARM64_INS_ADD) and (
-                [op.reg for op in insn.info.operands[:2]]
-                != [ARM64_REG_X29, ARM64_REG_SP]
-            ):
+            if insn.info.id != ARM64_INS_ADD:
+                continue
+
+            if [op.reg for op in insn.info.operands[:2]] != [
+                ARM64_REG_X29,
+                ARM64_REG_SP,
+            ]:
                 continue
 
             if (insn := next(disasm)).info.id != ARM64_INS_STP:
