@@ -92,12 +92,10 @@ class iBoot64Patcher(AArch64Patcher):
 
         # Find "platform_get_nonce" function
         cbz = self.search_insn('cbz', nonc_xref.offset, reverse=True)
-        bl = self.search_insn('bl', cbz.offset)
+        pgn_func = self.search_insn('bl', cbz.offset).follow_call()
 
-        func = bl.follow_call()
-
-        # Make "platform_consume_nonce" always be called
-        insn = self.search_insn('tbnz', func.offset)
+        # Ensure "platform_consume_nonce" always gets called
+        insn = self.search_insn('tbnz', pgn_func.offset)
         insn.patch('nop')
 
     def patch_kernel_debug(self) -> None:
