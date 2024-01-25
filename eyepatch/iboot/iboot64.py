@@ -108,38 +108,37 @@ class iBoot64Patcher(AArch64Patcher):
         if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('NVRAM patch only available on stage 2 iBoot')
 
-        debug_str = self.search_string('debug-uarts')
-        offset = self.data.find((debug_str.offset + self.base).to_bytes(0x8, 'little'))
+        # Find "env_blacklist" function
+        dbg_str = self.search_string('debug-uarts')
+        wl_offset = self.data.find((dbg_str.offset + self.base).to_bytes(0x8, 'little'))
         while True:
-            data = self.data[offset : offset + 0x8]
+            data = self.data[wl_offset : wl_offset + 0x8]
             if unpack('<Q', data)[0] == 0x0:
-                offset += 0x8
+                wl_offset += 0x8
                 break
 
-            offset -= 0x8
+            wl_offset -= 0x8
 
-        blacklist1_xref = self.search_xref(offset)
-        blacklist1_func = blacklist1_xref.function_begin()
-        blacklist1_func.patch('mov x0, #0')
-        next(blacklist1_func).patch('ret')
+        eb_func = self.search_xref(wl_offset).function_begin()
+        cbz = self.search_insn('cbz', eb_func.offset)
+        cbz.patch(f'b {cbz.info.operands[-1].imm}')
 
+        # Find "env_blacklist_nvram" function
         while True:
-            data = self.data[offset : offset + 0x8]
+            data = self.data[wl_offset : wl_offset + 0x8]
+            wl_offset += 0x8
             if unpack('<Q', data)[0] == 0x0:
                 break
 
-            offset += 0x8
+        ebn_func = self.search_xref(wl_offset).function_begin()
+        beq = self.search_insn('b.eq', ebn_func.offset)
+        beq.patch(f'b {beq.info.operands[-1].imm}')
 
-        blacklist2_xref = self.search_xref(offset)
-        blacklist2_bof = blacklist2_xref.function_begin()
-        blacklist2_bof.patch('mov x0, #0')
-        next(blacklist2_bof).patch('ret')
-
-        cas = self.search_string('com.apple.System.', exact=True)
-        cas_xref = self.search_xref(cas.offset)
-        cas_bof = cas_xref.function_begin()
-        cas_bof.patch('mov x0, #0')
-        next(cas_bof).patch('ret')
+        # Find "hide_key" function
+        cas_str = self.search_string('com.apple.System.', exact=True)
+        hk_func = self.search_xref(cas_str.offset).function_begin()
+        bl = self.search_insn('bl', hk_func.offset)
+        bl.patch('mov x0, #0x1')
 
     def patch_sigchecks(self):
         # Find "image4_validate_property_callback" function
