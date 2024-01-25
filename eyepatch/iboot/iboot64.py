@@ -142,7 +142,7 @@ class iBoot64Patcher(AArch64Patcher):
         next(cas_bof).patch('ret')
 
     def patch_sigchecks(self):
-        # find "_image4_validate_property_callback_interposer"
+        # Find "image4_validate_property_callback" function
         disasm = self.disasm(0x0)
         while True:
             mov = next(disasm)
@@ -160,26 +160,28 @@ class iBoot64Patcher(AArch64Patcher):
                 continue
 
             if bnch == int.from_bytes(b'BNCH', 'big'):
+                ivpc_func = mov.function_begin()
                 break
 
-        ret = self.search_insn('ret', mov.offset)
+        # Patch to always return 0
+        ivpc_ret = self.search_insn('ret', ivpc_func.offset)
 
-        # patch
-        # attempt the following:
-        # 1. search for the following instructions & replace
-        # "_image4_validate_property_callback_interposer" ret with branch
-        #   mov x0, #0
-        #   ret
-        #
-        # 2. search for 2 nops & replace them with mov x0, #0, then do 1.
-        mov_ret = self.search_insns('mov x0, #0', 'ret')
-        if mov_ret is not None:
-            ret.patch(f'b #{mov_ret.offset - ret.offset}')
-            return
+        for mov_reg in ('x0', 'w0'):
+            try:
+                branch_to = self.search_insns(f'mov {mov_reg}, #0', 'ret')
+                break
+            except errors.SearchError:
+                pass
 
-        nops = self.search_insns('nop', 'nop')
-        if nops is not None:
-            nops.patch('mov x0, #0')
-            next(nops).patch('ret')
-            ret.patch(f'b #0x{(nops.offset - ret.offset):x}')
-            return
+        else:
+            # Failed to find "mov x0/w0, #0" and "ret" instructions, search for nops we can overwrite
+            try:
+                branch_to = self.search_insns('nop', 'nop')
+                branch_to.patch('mov w0, #0')
+                next(branch_to).patch('ret')
+            except errors.SearchError:
+                # There's somehow not 2 nops that we can overwrite???
+                # TODO: Raise error
+                return
+
+        ivpc_ret.patch(f'b #{hex(branch_to.offset - ivpc_ret.offset)}')
