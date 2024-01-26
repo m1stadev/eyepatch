@@ -98,11 +98,18 @@ class iBoot64Patcher(AArch64Patcher):
         insn = self.search_insn('tbnz', pgn_func.offset)
         insn.patch('nop')
 
-    def patch_kernel_debug(self) -> None:
-        debug_str = self.search_string('debug-enabled')
-        xref = self.search_xref(debug_str.offset)
-        bl_2 = self.search_insn('bl', xref.offset, 1)
-        bl_2.patch('mov x0, #1')
+    def patch_security_allow_modes(self) -> None:
+        # Find "security_allow_modes" function
+        dbg_str = self.search_string('debug-enabled')
+        dbg_xref = self.search_xref(dbg_str.offset)
+        sam_func = self.search_insn('bl', dbg_xref.offset, 1).follow_call()
+
+        # Patch to always return 1
+        bne = self.search_insn('b.ne', sam_func.offset)
+        bne.patch(f'b #{bne.info.operands[-1].imm}')
+
+        mov = self.search_insn('mov', bne.offset + bne.info.operands[-1].imm)
+        mov.patch('mov x0, #0x1')
 
     def patch_nvram(self):
         if self.stage != types.iBootStage.STAGE_2:
