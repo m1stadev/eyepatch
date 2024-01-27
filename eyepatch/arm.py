@@ -221,9 +221,9 @@ class Patcher(eyepatch.base._Patcher):
                 insn_offset = (insn.offset & ~3) + op.mem.disp + 0x4
 
                 data = self.data[insn_offset : insn_offset + 4]
-                offset2 = unpack('<i', data)[0]
+                offset2 = unpack('<I', data)[0]
 
-                if offset2 - offset == base_addr:
+                if offset2 - base_addr == offset:
                     if skip == 0:
                         return insn
 
