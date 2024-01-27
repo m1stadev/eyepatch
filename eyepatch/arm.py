@@ -48,7 +48,7 @@ class Insn(eyepatch.base._Insn):
 
         self._data = bytearray(data)
         self.patcher._data[self.offset : self.offset + len(data)] = data
-        self._info = self.patcher.disasm(self.offset)
+        self._info = next(self.patcher.disasm(self.offset))
 
 
 class Patcher(eyepatch.base._Patcher):
