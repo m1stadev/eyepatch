@@ -245,12 +245,14 @@ class _Patcher(_Assembler, _Disassembler):
         self._disasm = disasm
         self._disasm.detail = True
 
-    def search_insns(self, *insns: str) -> _Insn:
+    def search_insns(self, *insns: str, offset: int = 0) -> _Insn:
         instructions = ';'.join(insns)
         data = self.asm(instructions)
 
-        offset = self.data.find(data)
+        offset = self.data.find(data, offset)
         if offset == -1:
-            raise eyepatch.SearchError(f'Failed to find instructions: {instructions}')
+            raise eyepatch.SearchError(
+                f'Failed to find instructions: {instructions} at offset: {hex(offset)}'
+            )
 
         return next(self.disasm(offset))
