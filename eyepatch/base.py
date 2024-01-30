@@ -81,7 +81,7 @@ class _Insn:
 
         self._data = bytearray(data)
         self.patcher._data[self.offset : self.offset + len(data)] = data
-        self._info = next(self.patcher.disasm(self.offset))
+        self._info = next(self.patcher.disasm(self.offset)).info
 
 
 class _ByteString:

@@ -48,7 +48,7 @@ class Insn(eyepatch.base._Insn):
 
         self._data = bytearray(data)
         self.patcher._data[self.offset : self.offset + len(data)] = data
-        self._info = next(self.patcher.disasm(self.offset))
+        self._info = next(self.patcher.disasm(self.offset)).info
 
 
 class Patcher(eyepatch.base._Patcher):
@@ -197,12 +197,12 @@ class Patcher(eyepatch.base._Patcher):
                 f'Failed to find instruction with immediate value: {hex(imm)}'
             )
 
-    def search_thumb_insns(self, *insns: str) -> Insn:
+    def search_thumb_insns(self, *insns: str, offset: int=0) -> Insn:
         instructions = '\n'.join(insns)
         data = self.asm_thumb(instructions)
-        offset = self.data.find(data)
+        offset = self.data.find(data, offset)
         if offset == -1:
-            raise eyepatch.SearchError(f'Failed to find instructions: {instructions}')
+            raise eyepatch.SearchError(f'Failed to find instructions: {instructions} at offset: {hex(offset)}')
 
         return next(self.disasm(offset))
 
