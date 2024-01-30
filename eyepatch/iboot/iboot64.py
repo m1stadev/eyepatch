@@ -152,10 +152,10 @@ class iBoot64Patcher(AArch64Patcher):
         disasm = self.disasm(0x0)
         while True:
             mov = next(disasm)
-            if mov.info.id != ARM64_INS_MOV:
+            if mov.info.mnemonic != 'mov':
                 continue
 
-            if (movk := next(disasm)).info.id != ARM64_INS_MOVK:
+            if (movk := next(disasm)).info.mnemonic != 'movk':
                 continue
 
             if mov.info.operands[-1].imm == 0x4348:
