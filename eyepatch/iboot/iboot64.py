@@ -1,9 +1,8 @@
 from functools import cached_property
 from struct import unpack
 
-from capstone.arm64_const import ARM64_INS_MOV, ARM64_INS_MOVK
-
 from eyepatch import AArch64Patcher, errors
+from eyepatch.aarch64 import Insn
 from eyepatch.iboot import types
 from eyepatch.iboot.errors import InvalidPlatform, InvalidStage
 
@@ -110,6 +109,57 @@ class iBoot64Patcher(AArch64Patcher):
 
         mov = self.search_insn('mov', bne.offset + bne.info.operands[-1].imm)
         mov.patch('mov x0, #0x1')
+
+    def patch_inject_print(self, string: str, insn: Insn) -> None:
+        # Find "printf" function
+        pst_str = self.search_string('power supply type')
+        pst_xref = self.search_xref(pst_str.offset)
+        printf_func = self.search_insn('bl', pst_xref.offset).follow_call()
+
+        # Find enough space to inject string + code
+        string = string.encode() + b'\0'
+        data_len = len(string) + (8 * 0x4)
+
+        offset = self.data.find(b'\0' * data_len)
+        while offset != -1:
+            if offset % 4 == 0:
+                break
+
+            offset = self.data.find(b'\0' * data_len, offset + 1)
+
+        else:
+            raise ValueError('No area big enough to place data + string')
+
+        # Function that saves x0 to stack, calls printf,
+        # restores x0, calls original instruction, then branches back to next instruction
+        insns = [
+            'sub sp, sp, #0x4',
+            'str x0, [sp, #0]',
+            'adr x0, #0x18',
+            f'bl #{hex(printf_func.offset - offset)}',
+            'ldr x0, [sp, #0]',
+            'add sp, sp, #0x4',
+        ]
+
+        # If original insn is relative address, change to be relative to our code
+        if insn.info.mnemonic in ('b', 'bl', 'cbnz', 'cbz', 'adr', 'tbz', 'tbnz') or (
+            insn.info.mnemonic == 'ldr' and len(insn.info.operands) == 2
+        ):
+            op_str = insn.info.op_str.replace(
+                hex(insn.info.operands[-1].imm),
+                hex(insn.info.operands[-1].imm + insn.offset - offset),
+            )
+        else:
+            op_str = insn.info.op_str
+
+        insns.append(f'{insn.info.mnemonic} {op_str}')
+        insns.append(f'b #{hex(next(insn).offset - offset)}')
+
+        asm = self.asm(';'.join(insns))
+
+        self._data[offset : offset + data_len] = asm + string
+        # Patch original instruction to branch to our function
+        insn.patch(f'b #{hex(offset - insn.offset)}')
 
     def patch_nvram(self):
         if self.stage != types.iBootStage.STAGE_2:
