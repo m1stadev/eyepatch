@@ -1,6 +1,8 @@
 from functools import cached_property
 from struct import unpack
 
+import capstone
+
 from eyepatch import AArch64Patcher, errors
 from eyepatch.aarch64 import Insn
 from eyepatch.iboot import types
@@ -241,3 +243,46 @@ class iBoot64Patcher(AArch64Patcher):
                 return
 
         ivpc_ret.patch(f'b #{hex(branch_to.offset - ivpc_ret.offset)}')
+
+    def patch_164_rdsk_apfs_corruption(self):
+        # Find platform_get_drbg_personalization function
+        disasm = self.disasm(0x0)
+        while True:
+            mov = next(disasm, None)
+            movk = next(disasm, None)
+            if mov is None or movk is None:
+                break
+            if mov.info.mnemonic != 'mov':
+                continue
+
+            if movk.info.mnemonic != 'movk':
+                continue
+            if mov.info.operands[-1].imm == 0x100:
+                if movk.info.operands[-1].imm == 0x2000:
+                    aes_crypto_cmd_arg1_offset = mov.offset - 16
+                    add = next(self.disasm(aes_crypto_cmd_arg1_offset), None)
+                    bof_gen = self.disasm(add.function_begin().offset)
+                    if add is None or add.info.mnemonic != 'add':
+                        return
+                    target = add.info.operands[-1].imm
+                    while True:
+                        adrp = next(bof_gen, None)
+                        add = next(bof_gen, None)
+                        if adrp is None or add is None:
+                            return
+                        # print(adrp.info.mnemonic)
+                        if adrp.info.mnemonic != 'adrp':
+                            continue
+                        if add.info.operands[-1].imm != target:
+                            return
+                        while True:
+                            bl = next(bof_gen, None)
+                            if bl is None:
+                                return
+                            if bl.info.mnemonic != 'bl':
+                                continue
+                            platform_get_boot_manifest_hash_call = bl
+                            platform_get_boot_manifest_hash_call.patch('mov w0, #0')
+                            break
+                        break
+                    break
