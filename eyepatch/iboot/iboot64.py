@@ -1,8 +1,6 @@
 from functools import cached_property
 from struct import unpack
 
-import capstone
-
 from eyepatch import AArch64Patcher, errors
 from eyepatch.aarch64 import Insn
 from eyepatch.iboot import types
