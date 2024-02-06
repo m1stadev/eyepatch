@@ -1,4 +1,4 @@
-from struct import unpack
+from struct import pack, unpack
 from sys import version_info
 from typing import Generator, Optional
 
@@ -210,32 +210,37 @@ class Patcher(eyepatch.base._Patcher):
 
     def search_xref(
         self, offset: int, base_addr: int, skip: int = 0
-    ) -> Optional['Insn']:
-        for insn in self.disasm(0x0):
-            if len(insn.info.operands) == 0:
-                continue
+    ) -> Optional[_insn]:
+        packed = pack('<I', base_addr + offset)
+        packed_offset = self.data.find(packed)
 
-            op = insn.info.operands[-1]
-            if op.type == ARM_OP_MEM:
-                if op.mem.base != ARM_REG_PC:
+        while packed_offset != -1:
+            disasm = self.disasm(packed_offset - 0x100)
+            while (insn := next(disasm)).offset < (packed_offset + 0xFF):
+                if len(insn.info.operands) == 0:
                     continue
 
-                insn_offset = (insn.offset & ~3) + op.mem.disp + 0x4
+                op = insn.info.operands[-1]
+                if op.type == ARM_OP_MEM:
+                    if packed_offset == -1:
+                        continue
 
-                data = self.data[insn_offset : insn_offset + 4]
-                offset2 = unpack('<I', data)[0]
+                    if op.mem.base != ARM_REG_PC:
+                        continue
 
-                if offset2 - base_addr == offset:
-                    if skip == 0:
-                        return insn
+                    if packed_offset == (insn.offset & ~3) + op.mem.disp + 0x4:
+                        if skip == 0:
+                            return insn
 
-                    skip -= 1
+                        skip -= 1
 
-            elif op.type == ARM_OP_IMM:
-                if op.imm + insn.offset == offset:
-                    if skip == 0:
-                        return insn
+                elif op.type == ARM_OP_IMM:
+                    if op.imm + insn.offset == offset:
+                        if skip == 0:
+                            return insn
 
-                    skip -= 1
+                        skip -= 1
+
+            packed_offset = self.data.find(packed, packed_offset + 1)
 
         raise eyepatch.SearchError(f'Failed to find xrefs to offset: 0x{offset:x}')
