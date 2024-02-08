@@ -197,7 +197,7 @@ class Patcher(eyepatch.base._Patcher):
                 f'Failed to find instruction with immediate value: {hex(imm)}'
             )
 
-    def search_thumb_insns(self, *insns: str, offset: int = 0) -> Insn:
+    def search_thumb_insns(self, *insns: str, offset: int = 0) -> _insn:
         instructions = '\n'.join(insns)
         data = self.asm_thumb(instructions)
         offset = self.data.find(data, offset)
