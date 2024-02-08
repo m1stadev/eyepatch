@@ -223,3 +223,25 @@ class iBoot64Patcher(AArch64Patcher):
                 return
 
         ivpc_ret.patch(f'b #{hex(branch_to.offset - ivpc_ret.offset)}')
+
+    def patch_apfs_corruption(self):
+        # Find "platform_get_drbg_personalization" function
+        mov = self.search_imm(0x20000100)
+        pgdp_func = mov.function_begin()
+
+        # Find "platform_get_boot_manifest_hash" call
+        target = self.search_insn('add', mov.offset, reverse=True)
+        for insn in self.disasm(target.offset, reverse=True):
+            if insn.offset < pgdp_func.offset:
+                # TODO: Raise error
+                pass
+
+            if insn.info.mnemonic != 'add':
+                continue
+
+            if insn.info.operands[-1].imm == target.info.operands[-1].imm:
+                pgbnh_call = self.search_insn('bl', insn.offset)
+                break
+
+        # Patch to always return 0
+        pgbnh_call.patch('mov w0, #0')
