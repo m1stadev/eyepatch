@@ -198,26 +198,8 @@ class iBoot64Patcher(AArch64Patcher):
         bl.patch('mov x0, #0x1')
 
     def patch_sigchecks(self):
-        # Find "image4_validate_property_callback" function
-        disasm = self.disasm(0x0)
-        while True:
-            mov = next(disasm)
-            if mov.info.mnemonic != 'mov':
-                continue
-
-            if (movk := next(disasm)).info.mnemonic != 'movk':
-                continue
-
-            if mov.info.operands[-1].imm == 0x4348:
-                bnch = (movk.info.operands[-1].imm << 16) | mov.info.operands[-1].imm
-            elif mov.info.operands[-1].imm == 0x424E0000:
-                bnch = mov.info.operands[-1].imm | movk.info.operands[-1].imm
-            else:
-                continue
-
-            if bnch == int.from_bytes(b'BNCH', 'big'):
-                ivpc_func = mov.function_begin()
-                break
+        # Find "image4_validate_property_callback" function'
+        ivpc_func = self.search_imm(int.from_bytes(b'BNCH', 'big')).function_begin()
 
         # Patch to always return 0
         ivpc_ret = self.search_insn('ret', ivpc_func.offset)
