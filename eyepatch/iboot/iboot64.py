@@ -242,45 +242,24 @@ class iBoot64Patcher(AArch64Patcher):
 
         ivpc_ret.patch(f'b #{hex(branch_to.offset - ivpc_ret.offset)}')
 
-    def patch_164_rdsk_apfs_corruption(self):
-        # Find platform_get_drbg_personalization function
-        disasm = self.disasm(0x0)
-        while True:
-            mov = next(disasm, None)
-            movk = next(disasm, None)
-            if mov is None or movk is None:
-                break
-            if mov.info.mnemonic != 'mov':
+    def patch_apfs_corruption(self):
+        # Find "platform_get_drbg_personalization" function
+        mov = self.search_imm(0x20000100)
+        pgdp_func = mov.function_begin()
+
+        # Find "platform_get_boot_manifest_hash" call
+        target = self.search_insn('add', mov.offset, reverse=True)
+        for insn in self.disasm(target.offset, reverse=True):
+            if insn.offset < pgdp_func.offset:
+                # TODO: Raise error
+                pass
+
+            if insn.info.mnemonic != 'add':
                 continue
 
-            if movk.info.mnemonic != 'movk':
-                continue
-            if mov.info.operands[-1].imm == 0x100:
-                if movk.info.operands[-1].imm == 0x2000:
-                    aes_crypto_cmd_arg1_offset = mov.offset - 16
-                    add = next(self.disasm(aes_crypto_cmd_arg1_offset), None)
-                    bof_gen = self.disasm(add.function_begin().offset)
-                    if add is None or add.info.mnemonic != 'add':
-                        return
-                    target = add.info.operands[-1].imm
-                    while True:
-                        adrp = next(bof_gen, None)
-                        add = next(bof_gen, None)
-                        if adrp is None or add is None:
-                            return
-                        # print(adrp.info.mnemonic)
-                        if adrp.info.mnemonic != 'adrp':
-                            continue
-                        if add.info.operands[-1].imm != target:
-                            return
-                        while True:
-                            bl = next(bof_gen, None)
-                            if bl is None:
-                                return
-                            if bl.info.mnemonic != 'bl':
-                                continue
-                            platform_get_boot_manifest_hash_call = bl
-                            platform_get_boot_manifest_hash_call.patch('mov w0, #0')
-                            break
-                        break
-                    break
+            if insn.info.operands[-1].imm == target.info.operands[-1].imm:
+                pgbnh_call = self.search_insn('bl', insn.offset)
+                break
+
+        # Patch to always return 0
+        pgbnh_call.patch('mov w0, #0')
