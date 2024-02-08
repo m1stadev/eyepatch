@@ -14,6 +14,7 @@ from capstone.arm64_const import (
     ARM64_OP_IMM,
     ARM64_REG_SP,
     ARM64_REG_X29,
+    ARM64_SFT_LSL,
 )
 from keystone import KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN, Ks
 
@@ -90,3 +91,30 @@ class Patcher(eyepatch.base._Patcher):
                 skip -= 1
 
         raise eyepatch.SearchError(f'Failed to find xrefs to offset: 0x{offset:x}')
+
+    def search_imm(self, imm: int, offset: int = 0, skip: int = 0) -> _insn:
+        for insn in self.disasm(offset):
+            if len(insn.info.operands) == 0:
+                continue
+
+            val = insn.info.operands[-1].imm
+            if insn.info.mnemonic == 'mov':
+                movk = next(insn)
+                while movk.info.mnemonic == 'movk':
+                    shift = movk.info.operands[-1].shift
+                    if shift.type == ARM64_SFT_LSL:
+                        val |= movk.info.operands[-1].imm << shift.value
+                    else:
+                        val |= movk.info.operands[-1].imm
+
+                    movk = next(movk)
+
+            if val == imm:
+                if skip == 0:
+                    return insn
+
+                skip -= 1
+
+        raise eyepatch.SearchError(
+            f'Failed to find instruction with immediate value: {hex(imm)}'
+        )
