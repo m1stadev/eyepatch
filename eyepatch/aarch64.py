@@ -80,15 +80,22 @@ class Patcher(eyepatch.base._Patcher):
 
     def search_xref(self, offset: int, skip: int = 0) -> Optional[_insn]:  # noqa: F821
         for insn in self.disasm(0x0):
-            if len(insn.info.operands) == 0:
-                continue
+            if insn.info.mnemonic in (
+                'b',
+                'bl',
+                'cbnz',
+                'cbz',
+                'adr',
+                'tbz',
+                'tbnz',
+                'ldr',
+            ):
+                op = insn.info.operands[-1]
+                if op.type == ARM64_OP_IMM and (op.imm + insn.offset) == offset:
+                    if skip == 0:
+                        return insn
 
-            op = insn.info.operands[-1]
-            if op.type == ARM64_OP_IMM and (op.imm + insn.offset) == offset:
-                if skip == 0:
-                    return insn
-
-                skip -= 1
+                    skip -= 1
 
         raise eyepatch.SearchError(f'Failed to find xrefs to offset: 0x{offset:x}')
 
