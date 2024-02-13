@@ -81,6 +81,31 @@ class iBoot64Patcher(AArch64Patcher):
         major, minor, patch = version_str.string[6:].split('.', maxsplit=2)
         return types.iBootVersion(int(major), int(minor), int(patch))
 
+    @cached_property
+    def ret0_gadget(self) -> Insn:
+        try:
+            insn = self.search_insns('mov w0, #0', 'ret')
+        except errors.SearchError:
+            # Failed to find "mov w0, #0" and "ret" instructions
+            # Insert our own instructions into empty space
+            asm_len = 2 * 0x4
+            offset = self.data.find(b'\0' * asm_len)
+            while offset != -1:
+                if offset % 4 == 0:
+                    break
+
+                offset = self.data.find(b'\0' * asm_len, offset + 1)
+
+            else:
+                raise ValueError('No area big enough to place instructions')
+
+            asm = self.asm('mov w0, #0; ret')
+            self._data[offset : offset + asm_len] = asm
+
+            insn = next(self.disasm(offset))
+
+        return insn
+
     def patch_freshnonce(self) -> None:
         if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('freshnonce patch only available on stage 2 iBoot')
