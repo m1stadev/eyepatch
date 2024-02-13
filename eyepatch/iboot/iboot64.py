@@ -229,25 +229,7 @@ class iBoot64Patcher(AArch64Patcher):
         # Patch to always return 0
         ivpc_ret = self.search_insn('ret', ivpc_func.offset)
 
-        for mov_reg in ('x0', 'w0'):
-            try:
-                branch_to = self.search_insns(f'mov {mov_reg}, #0', 'ret')
-                break
-            except errors.SearchError:
-                pass
-
-        else:
-            # Failed to find "mov x0/w0, #0" and "ret" instructions, search for nops we can overwrite
-            try:
-                branch_to = self.search_insns('nop', 'nop')
-                branch_to.patch('mov w0, #0')
-                next(branch_to).patch('ret')
-            except errors.SearchError:
-                # There's somehow not 2 nops that we can overwrite???
-                # TODO: Raise error
-                return
-
-        ivpc_ret.patch(f'b #{hex(branch_to.offset - ivpc_ret.offset)}')
+        ivpc_ret.patch(f'b #{hex(self.ret0_gadget.offset - ivpc_ret.offset)}')
 
     def patch_apfs_corruption(self):
         # Find "platform_get_drbg_personalization" function
