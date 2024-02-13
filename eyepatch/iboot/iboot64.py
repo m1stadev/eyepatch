@@ -192,9 +192,11 @@ class iBoot64Patcher(AArch64Patcher):
         if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('NVRAM patch only available on stage 2 iBoot')
 
-        # Find "env_blacklist" function
+        # Find "env_blacklist_nvram" function
         dbg_str = self.search_string('debug-uarts')
-        wl_offset = self.data.find((dbg_str.offset + self.base).to_bytes(0x8, 'little'))
+        wl_offset = self.data.rfind(
+            (dbg_str.offset + self.base).to_bytes(0x8, 'little')
+        )
         while True:
             data = self.data[wl_offset : wl_offset + 0x8]
             if unpack('<Q', data)[0] == 0x0:
@@ -203,26 +205,44 @@ class iBoot64Patcher(AArch64Patcher):
 
             wl_offset -= 0x8
 
-        eb_func = self.search_xref(wl_offset).function_begin()
-        cbz = self.search_insn('cbz', eb_func.offset)
-        cbz.patch(f'b {cbz.info.operands[-1].imm}')
-
-        # Find "env_blacklist_nvram" function
-        while True:
-            data = self.data[wl_offset : wl_offset + 0x8]
-            wl_offset += 0x8
-            if unpack('<Q', data)[0] == 0x0:
-                break
-
         ebn_func = self.search_xref(wl_offset).function_begin()
-        beq = self.search_insn('b.eq', ebn_func.offset)
-        beq.patch(f'b {beq.info.operands[-1].imm}')
+
+        # Patch to set return value as 0
+        ebn_beq = self.search_insn('b.eq', ebn_func.offset)
+        ebn_beq.patch(f'b #{hex(ebn_beq.info.operands[-1].imm)}')
+        ebn_beq_call = ebn_beq.follow_call()
+        ebn_beq_call.patch('mov w0, #0')
+
+        # Ensure no other code changes the return value
+        insn = next(ebn_beq_call)
+        while insn.info.mnemonic != 'ldp':
+            insn.patch('nop')
+            insn = next(insn)
+
+        if self.build_style == 'RELEASE':
+            # Find "env_blacklist" function
+            # Only exists on RELEASE builds
+            eb_func = self.search_insn(
+                'adr', ebn_func.offset, reverse=True
+            ).function_begin()
+
+            # Patch to always return 0
+            eb_beq = self.search_insn('b.eq', eb_func.offset)
+            eb_beq.patch(f'b #{hex(eb_beq.info.operands[-1].imm)}')
+            eb_beq_call = eb_beq.follow_call()
+            eb_beq_call.patch('mov w0, #0')
+
+            # Ensure no other code changes the return value
+            insn = next(eb_beq_call)
+            while insn.info.mnemonic != 'ldp':
+                insn.patch('nop')
+                insn = next(insn)
 
         # Find "hide_key" function
         cas_str = self.search_string('com.apple.System.', exact=True)
         hk_func = self.search_xref(cas_str.offset).function_begin()
         bl = self.search_insn('bl', hk_func.offset)
-        bl.patch('mov x0, #0x1')
+        bl.patch('mov w0, #0x1')
 
     def patch_sigchecks(self):
         # Find "image4_validate_property_callback" function'
