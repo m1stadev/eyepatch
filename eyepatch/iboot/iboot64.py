@@ -1,6 +1,8 @@
 from functools import cached_property
 from struct import unpack
 
+from capstone.arm64_const import ARM64_REG_X1
+
 from eyepatch import AArch64Patcher, errors
 from eyepatch.aarch64 import Insn
 from eyepatch.iboot import types
@@ -23,26 +25,26 @@ class iBoot64Patcher(AArch64Patcher):
         if self.stage != types.iBootStage.STAGE_2:
             raise InvalidStage('build-style only available on stage 2 iBoot')
 
-        # Find "_sys_setup_default_environment"
         bs_str = self.search_string('build-style')
-        xref = self.search_xref(bs_str.offset)
-        ssde_bof = xref.function_begin()
+        bs_xref = self.search_xref(bs_str.offset)
 
-        skip = 0
-        while True:
-            ldr = self.search_insn('ldr', ssde_bof.offset, skip=skip)
-            if ldr is None:
+        es_func = self.search_insn('bl', bs_xref.offset)
+        for insn in self.disasm(es_func.offset, reverse=True):
+            if len(insn.info.operands) == 0:
+                continue
+
+            if insn.info.operands[0].reg != ARM64_REG_X1:
+                continue
+
+            offset = insn.offset + insn.info.operands[-1].imm
+            if insn.info.mnemonic == 'ldr':
+                offset = unpack('<Q', self.data[offset : offset + 8])[0] - self.base
+
+            elif insn.info.mnemonic != 'adr':
                 # TODO: Raise error
                 return
 
-            if next(ldr) == xref:
-                break
-
-            skip += 1
-
-        iboot_offset = ldr.offset + ldr.info.operands[-1].imm
-        offset = unpack('<Q', self.data[iboot_offset : iboot_offset + 8])[0]
-        return self.search_string(offset=offset - self.base).string
+            return self.search_string(offset=offset).string
 
     @cached_property
     def platform(self) -> int:
