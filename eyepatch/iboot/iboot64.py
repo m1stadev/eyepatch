@@ -41,8 +41,7 @@ class iBoot64Patcher(AArch64Patcher):
                 offset = unpack('<Q', self.data[offset : offset + 8])[0] - self.base
 
             elif insn.info.mnemonic != 'adr':
-                # TODO: Raise error
-                return
+                raise errors.SearchError('Failed to find build style')
 
             return self.search_string(offset=offset).string
 
