@@ -239,6 +239,8 @@ class iBoot64Patcher(AArch64Patcher):
 
         # Find "hide_key" function
         cas_str = self.search_string('com.apple.System.', exact=True)
+
+        # Patch "strncmp" call to always return 1 (causes "hide_key" to always return 0)
         bl = self.search_insn('bl', cas_str.offset)
         bl.patch('mov w0, #0x1')
 
