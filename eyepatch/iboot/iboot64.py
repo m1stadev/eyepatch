@@ -284,11 +284,10 @@ class iBoot64Patcher(AArch64Patcher):
     def patch_do_devicetree_raw(self):
         # Find "do_devicetree" function and patch it to use correct size for dt serialize. For some reason size is lost
         # on the stack when sending a raw devicetree.
-        ddt = self.search_string("Device Tree too large\n", exact=True)
+        ddt = self.search_string('Device Tree too large\n', exact=True)
         ddt_xref = self.search_xref(ddt.offset)
         strx = self.search_insn('str', ddt_xref.offset)
         for insn in self.disasm(ddt_xref.offset):
-
             if insn.info.mnemonic != 'str':
                 continue
             if insn.info.operands[0].reg == ARM64_REG_XZR:
