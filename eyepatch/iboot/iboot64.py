@@ -1,7 +1,7 @@
 from functools import cached_property
 from struct import unpack
 
-from capstone.arm64_const import ARM64_REG_X1
+from capstone.arm64_const import ARM64_REG_X1, ARM64_REG_XZR
 
 from eyepatch import AArch64Patcher, errors
 from eyepatch.aarch64 import Insn
@@ -241,7 +241,8 @@ class iBoot64Patcher(AArch64Patcher):
         cas_str = self.search_string('com.apple.System.', exact=True)
 
         # Patch "strncmp" call to always return 1 (causes "hide_key" to always return 0)
-        bl = self.search_insn('bl', cas_str.offset)
+        cas_str_xref = self.search_xref(cas_str.offset)
+        bl = self.search_insn('bl', cas_str_xref.offset)
         bl.patch('mov w0, #0x1')
 
     def patch_sigchecks(self):
@@ -253,13 +254,62 @@ class iBoot64Patcher(AArch64Patcher):
 
         ivpc_ret.patch(f'b #{hex(self.ret0_gadget.offset - ivpc_ret.offset)}')
 
+    def patch_image_load_raw(self):
+        # Find "image4_validate_property_callback" function, get xref to image4_load, then xref to image_load function
+        # Patch image_load function to skip image4_load call since we are sending raw file, set return to 0.
+        ivpc_func = self.search_imm(int.from_bytes(b'BNCH', 'big')).function_begin()
+        ivpc_func_ptr = self.data.rfind(
+            (ivpc_func.offset + self.base).to_bytes(0x8, 'little')
+        )
+        image4_load_func = self.search_xref(ivpc_func_ptr).function_begin()
+        image4_load_xref = self.search_xref(image4_load_func.offset)
+        # Skip and return 0
+        image4_load_xref.patch('mov w0, #0')
+
+    def patch_image_create_from_memory_raw(self):
+        # Find "image_create_from_memory" function and basically patch it to backport the old way it used to work so
+        # img4-less(raw) is possible. In older iBoot, image allocation was set to inputted length and didn't parse
+        # img4 to obtain the length
+        ilm = self.search_imm(int.from_bytes(b'<ILM', 'big'))
+        icfm = self.search_insn('bl', ilm.offset + 4, skip=1)
+        igp = self.search_insn('bl', (icfm.info.operands[-1].imm + icfm.offset), skip=1)
+        # Skip image4_get_partial call since we are uploading a raw file, set return to 0
+        igp.patch('mov w0, #0')
+        mov = self.search_insn('mov', igp.offset, reverse=True, skip=1)
+        reg = mov.info.reg_name(mov.info.operands[1].reg)
+        ldr = self.search_insn('ldr', igp.offset)
+        # Preserve load address
+        ldr.patch(f'mov x8, {reg}')
+
+    def patch_do_devicetree_raw(self):
+        # Find "do_devicetree" function and patch it to use correct size for dt serialize. For some reason size is lost
+        # on the stack when sending a raw devicetree.
+        ddt = self.search_string('Device Tree too large\n', exact=True)
+        ddt_xref = self.search_xref(ddt.offset)
+        strx = self.search_insn('str', ddt_xref.offset)
+        for insn in self.disasm(ddt_xref.offset):
+            if insn.info.mnemonic != 'str':
+                continue
+            if insn.info.operands[0].reg == ARM64_REG_XZR:
+                strx = insn
+                break
+
+        mov = self.search_insn('mov', strx.offset, skip=1)
+        reg = mov.info.reg_name(mov.info.operands[1].reg)
+        bl = self.search_insn('bl', strx.offset, skip=1)
+        ldr = self.search_insn('ldr', bl.offset, reverse=True)
+        # Move devicetree size into arg1 of dt serialize call.
+        ldr.patch(f'mov x1, {reg}')
+
     def patch_apfs_corruption(self):
-        # Find "platform_get_drbg_personalization" function
+        # Find "platform_get_drbg_personalization" function and patch it to not check boot manifest hash.
+        # The apfs corruption bug seems to zero out boot manifest hash making this function panic.
         mov = self.search_imm(0x20000100)
         pgdp_func = mov.function_begin()
 
         # Find "platform_get_boot_manifest_hash" call
         target = self.search_insn('add', mov.offset, reverse=True)
+        pgbnh_call = None
         for insn in self.disasm(target.offset, reverse=True):
             if insn.offset < pgdp_func.offset:
                 # TODO: Raise error
