@@ -28,12 +28,11 @@ An *OS bootchain patching library, written in Python.</a>
 - A good example for the API is in [`eyepatch/iboot`](https://github.com/m1stadev/eyepatch/blob/master/eyepatch/iboot/iboot64.py).
 
 ## Requirements
-- Python 3.8 or higher
+- Python 3.9 or higher
 
 ## Installation
 - Local installation:
     - `./install.sh`
-    - Requires [Poetry](https://python-poetry.org)
 
 ## TODO
 - Write documentation
