@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from sys import version_info
-from typing import Optional
 
 from capstone import (
     CS_ARCH_ARM64,
@@ -78,7 +79,7 @@ class Patcher(eyepatch.base._Patcher):
             disasm=Cs(CS_ARCH_ARM64, CS_MODE_ARM),
         )
 
-    def search_xref(self, offset: int, skip: int = 0) -> Optional[_insn]:  # noqa: F821
+    def search_xref(self, offset: int, skip: int = 0) -> _insn | None:
         for insn in self.disasm(0x0):
             if insn.info.mnemonic in (
                 'b',
