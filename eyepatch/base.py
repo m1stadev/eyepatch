@@ -1,5 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Generator
 from sys import version_info
-from typing import Generator, Optional, Union
 
 from capstone import Cs, CsError, CsInsn
 from keystone import Ks, KsError
@@ -31,7 +33,7 @@ class _Insn:
         offset: int,
         data: bytes,
         info: CsInsn,
-        patcher: '_Patcher',
+        patcher: _Patcher,
     ):
         self._offset = offset
         self._data = bytearray(data)
@@ -69,7 +71,7 @@ class _Insn:
         return self._offset
 
     @property
-    def patcher(self) -> '_Patcher':
+    def patcher(self) -> _Patcher:
         return self._patcher
 
     def patch(self, insn: str) -> None:
@@ -85,7 +87,7 @@ class _Insn:
 
 
 class _ByteString:
-    def __init__(self, offset: int, data: bytes, patcher: '_Patcher' = None):
+    def __init__(self, offset: int, data: bytes, patcher: _Patcher = None):
         self._offset = offset
         self._data = bytearray(data)
         self._patcher = patcher
@@ -106,14 +108,14 @@ class _ByteString:
         return self._offset
 
     @property
-    def patcher(self) -> '_Patcher':
+    def patcher(self) -> _Patcher:
         return self._patcher
 
     def replace(
         self,
-        oldvalue: Union[str, bytes],
-        newvalue: Union[str, bytes],
-        count: Optional[int] = None,
+        oldvalue: str | bytes,
+        newvalue: str | bytes,
+        count: int | None = None,
     ) -> None:
         if isinstance(oldvalue, str):
             oldvalue = oldvalue.encode()
@@ -174,7 +176,7 @@ class _Disassembler:
 
     def search_insn(
         self, insn_name: str, offset: int = 0, skip: int = 0, reverse: bool = False
-    ) -> Optional[_insn]:
+    ) -> _insn | None:
         for insn in self.disasm(offset, reverse):
             if insn.info.mnemonic == insn_name:
                 if skip == 0:
@@ -198,8 +200,8 @@ class _Disassembler:
 
     def search_string(
         self,
-        string: Optional[Union[str, bytes]] = None,
-        offset: Optional[int] = None,
+        string: str | bytes | None = None,
+        offset: int | None = None,
         skip: int = 0,
         exact: bool = False,
     ) -> _string:
