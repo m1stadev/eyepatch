@@ -1,6 +1,8 @@
+from __future__ import annotations
+
+from collections.abc import Generator
 from struct import pack, unpack
 from sys import version_info
-from typing import Generator, Optional
 
 from capstone import (
     CS_ARCH_ARM,
@@ -186,16 +188,14 @@ class Patcher(eyepatch.base._Patcher):
 
                     skip -= 1
 
-            elif op.type == ARM_OP_IMM:
-                if op.imm == imm:
-                    if skip == 0:
-                        return insn
+            elif op.type == ARM_OP_IMM and op.imm == imm:
+                if skip == 0:
+                    return insn
 
-                    skip -= 1
-        else:
-            raise eyepatch.SearchError(
-                f'Failed to find instruction with immediate value: {hex(imm)}'
-            )
+                skip -= 1
+        raise eyepatch.SearchError(
+            f'Failed to find instruction with immediate value: {hex(imm)}'
+        )
 
     def search_thumb_insns(self, *insns: str, offset: int = 0) -> _insn:
         instructions = '\n'.join(insns)
@@ -208,9 +208,7 @@ class Patcher(eyepatch.base._Patcher):
 
         return next(self.disasm(offset))
 
-    def search_xref(
-        self, offset: int, base_addr: int, skip: int = 0
-    ) -> Optional[_insn]:
+    def search_xref(self, offset: int, base_addr: int, skip: int = 0) -> _insn | None:
         packed = pack('<I', base_addr + offset)
         packed_offset = self.data.find(packed)
 

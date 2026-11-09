@@ -4,7 +4,7 @@ from loguru import logger as _logger
 
 from .aarch64 import Patcher as AArch64Patcher  # noqa: F401
 from .arm import Patcher as ARMPatcher  # noqa: F401
-from .errors import *  # noqa: F403
+from .errors import *
 
 __version__ = version(__package__)
 
